@@ -36,16 +36,27 @@ fn euclidean_distance<F: ScalarField>(
     let a: Vec<F> = input.a.iter().map(|a_i| fixed_point_chip.quantization(*a_i)).collect();
     let b: Vec<F> = input.b.iter().map(|b_i| fixed_point_chip.quantization(*b_i)).collect();
 
-    // assign quantizations to context
+    // assign quantizations to circuit
     let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(a);
-    // let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(b);
+    let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(b);
 
-    // TODO;
-    println!("a[0]: {:?}", a[0]);
-    let a0sqrt = fixed_point_chip.qsqrt(ctx, a[0]);
-    let a0sqrt_native = fixed_point_chip.dequantization(*a0sqrt.value());
-    make_public.push(a0sqrt);
-    println!("out: {:?}", a0sqrt_native);
+    // compute difference vector (a-b)
+    let ab_diffs: Vec<AssignedValue<F>> =
+        a.iter().zip(&b).map(|(a_i, b_i)| fixed_point_chip.qsub(ctx, *a_i, *b_i)).collect();
+
+    // compute squares of differences
+    let ab_diffsquares: Vec<AssignedValue<F>> =
+        ab_diffs.iter().map(|x| fixed_point_chip.qmul(ctx, *x, *x)).collect();
+
+    // compute sum of squares of differences
+    let ab_sum: AssignedValue<F> = fixed_point_chip.qsum(ctx, ab_diffsquares);
+
+    // euclidean distance
+    let dist = fixed_point_chip.qsqrt(ctx, ab_sum);
+    make_public.push(dist);
+
+    let dist_native = fixed_point_chip.dequantization(*dist.value());
+    println!("euclidean distance: {:?}", dist_native);
 }
 
 fn main() {
