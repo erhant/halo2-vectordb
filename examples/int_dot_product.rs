@@ -1,7 +1,7 @@
 use clap::Parser;
 use halo2_base::gates::{GateChip, GateInstructions};
 use halo2_base::utils::ScalarField;
-use halo2_base::AssignedValue;
+use halo2_base::{AssignedValue, QuantumCell};
 #[allow(unused_imports)]
 use halo2_base::{
     Context,
@@ -13,27 +13,26 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput {
-    pub u: Vec<u64>,
-    pub v: Vec<u64>,
+    pub a: Vec<u8>,
+    pub b: Vec<u8>,
 }
 
-fn dot_product<F: ScalarField>(
+fn int_dot_product<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
-    // map vectors to field elements
-    let mut u = ctx.assign_witnesses(input.u.into_iter().map(F::from));
-    let mut v = ctx.assign_witnesses(input.v.into_iter().map(F::from));
-    // assert_eq!(u.len(), 5);
-    // assert_eq!(v.len(), 5);
-
-    // compute dot product via the Gate Chip
+    assert_eq!(input.a.len(), input.b.len());
     let gate = GateChip::<F>::default();
 
-    // TODO
-    let out = gate.inner_product(ctx, u, v);
+    // map vectors to field elements
+    let a: Vec<AssignedValue<F>> =
+        ctx.assign_witnesses(input.a.iter().map(|a_i| F::from(*a_i as u64)));
+    let b: Vec<AssignedValue<F>> =
+        ctx.assign_witnesses(input.b.iter().map(|b_i| F::from(*b_i as u64)));
 
+    // compute
+    let out = gate.inner_product(ctx, a, b.into_iter().map(QuantumCell::Existing));
     make_public.push(out);
     println!("out: {:?}", out.value());
 }
@@ -42,5 +41,5 @@ fn main() {
     env_logger::init();
 
     let args = Cli::parse();
-    run(dot_product, args);
+    run(int_dot_product, args);
 }

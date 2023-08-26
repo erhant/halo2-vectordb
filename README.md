@@ -22,25 +22,25 @@ We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, 
 -   `cosine_similarity`
 
 $$
-\frac{\sum_{i = 1}^n a_i \cdot b_i}{\sqrt{\sum_{i = 1}^n a_i^2} \cdot \sqrt{\sum_{i = 1}^n b_i^2}}
+\frac{\sum_{i = 1}^{n} a_i \cdot b_i}{\sqrt{\sum_{i = 1}^{n} a_i^2} \cdot \sqrt{\sum_{i = 1}^{n} b_i^2}}
 $$
 
 -   `euclidean_similarity`
 
 $$
-\sqrt{\sum_{i = 1}^n (a_i - b_i)^2}
+\sqrt{\sum_{i = 1}^{n} (a_i - b_i)^2}
 $$
 
 -   `dot_product_similarity`
 
 $$
-\sum_{i = 1}^n a_i\cdot b_i
+\sum_{i = 1}^{n} a_i\cdot b_i
 $$
 
 -   `hamming_similarity`
 
 $$
-\frac{\sum_{i = 1}^n[a_i = b_i]}{n}
+\frac{1}{n}\sum_{i = 1}^{n} [a_i = b_i]
 $$
 
 TODO: if time permits, more advanced algorithms?
@@ -48,6 +48,14 @@ TODO: if time permits, more advanced algorithms?
 ### Committing to a Database
 
 TODO: merkle the entire thing? treat vectors as polys and commit to them (e.g. KZG?)
+
+## Usage
+
+Some usage scripts (will be updated as time goes on):
+
+```sh
+cargo run --example dot_product -- --name dot_product -k 8 mock
+```
 
 ## Testing
 
