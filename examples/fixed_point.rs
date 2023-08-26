@@ -20,17 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use clap::Parser;
 use halo2_base::utils::{BigPrimeField, ScalarField};
 use halo2_base::AssignedValue;
 use halo2_base::Context;
 use halo2_scaffold::gadget::fixed_point::{FixedPointChip, FixedPointInstructions};
+use halo2_scaffold::scaffold::cmd::Cli;
+use halo2_scaffold::scaffold::run;
+use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
 // use halo2_scaffold::scaffold::{mock, prove};
 use std::env::{set_var, var};
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CircuitInput {
+    pub x: f64,
+}
+
 fn fixed_point<F: ScalarField>(
     ctx: &mut Context<F>,
-    x: f64,
+    input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
 ) where
     F: BigPrimeField,
@@ -45,8 +54,8 @@ fn fixed_point<F: ScalarField>(
     // fixed-point exp arithmetic
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
 
-    let x_decimal = x;
-    let x = fixed_point_chip.quantization(x);
+    let x_decimal = input.x;
+    let x = fixed_point_chip.quantization(input.x);
     println!("x: {:?}", x);
 
     // first we load a number `x` into as system, as a "witness"
@@ -104,9 +113,9 @@ fn fixed_point<F: ScalarField>(
 fn main() {
     env_logger::init();
 
-    // genrally lookup_bits is degree - 1
-    set_var("LOOKUP_BITS", 12.to_string());
-    set_var("DEGREE", 13.to_string());
+    // // genrally lookup_bits is degree - 1
+    // set_var("LOOKUP_BITS", 12.to_string());
+    // set_var("DEGREE", 13.to_string());
 
     // run mock prover
     // mock(some_algorithm_in_zk, -12.0);
@@ -121,4 +130,9 @@ fn main() {
     // uncomment below to run actual prover:
     // the 3rd parameter is a dummy input to provide for the proving key generation
     // prove(some_algorithm_in_zk, 0.25 * std::f64::consts::PI, 0.5 * std::f64::consts::PI);
+
+    let args = Cli::parse();
+
+    // run different zk commands based on the command line arguments
+    run(fixed_point, args);
 }
