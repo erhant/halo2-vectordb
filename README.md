@@ -1,19 +1,18 @@
-# Halo2 VectorDB
+<p align="center">
+  <h1 align="center">
+    Halo2 VectorDB
+  </h1>
+  <p align="center">
+    <i>Verifiable vector similarity queries over a committed vector database.</i>
+  </p>
+</p>
 
-Verifiable vector similarity queries over a committed vector database.
-
-## Methodology
-
-We are given a set of embedding vectors. These vectors are typically composed of floating point values, which is an issue for our arithmetic circuits that operate over integers modulo some large prime. To combat this problem, we will use [Scalar Quantizaiton](https://qdrant.tech/articles/scalar-quantization/), a process that converts floating-point values to integers (e.g. 32-bit floating-point values are reduced to 8-bit integers), and our circuits will operate over these integer valued vectors.
+We are given a set of embedding vectors. These vectors are typically composed of floating point values, which is an issue for our arithmetic circuits that operate over integers modulo some large prime. Thankfully, an awesome work by Wentao Xiao enables fixed-point arithmetic in Halo2: [ZKFixedPointChip](https://github.com/DCMMC/ZKFixedPointChip). We will make heavy use of this chip.
 
 After this, we have several vectors in the database along with a query vector. We would like the circuit to find a vector in the database that is similar to our query vector. This task has two aspects:
 
 -   The vector similarity algorithms should be verifiable, i.e. we need to implement chips for them.
 -   The database should be committed to, ensuring that the verifiable similarity algorithm has been used on all vectors.
-
-### Scalar Quantization
-
-TODO: can we do this verifiably?
 
 ### Similarity Algorithms
 
@@ -54,7 +53,11 @@ TODO: merkle the entire thing? treat vectors as polys and commit to them (e.g. K
 Some usage scripts (will be updated as time goes on):
 
 ```sh
-cargo run --example dot_product -- --name dot_product -k 8 mock
+# integer dot product example
+cargo run --example int_dot_product -- --name int_dot_product -k 8 mock
+
+# fixed point example
+LOOKUP_BITS=12 cargo run --example euclidean -- --name euclidean -k 13 mock
 ```
 
 ## Testing
