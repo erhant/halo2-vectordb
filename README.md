@@ -16,27 +16,27 @@ After this, we have several vectors in the database along with a query vector. W
 
 ### Similarity Algorithms
 
-We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, and exposes the following functions:
+We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, and exposes the following similarity functions:
 
--   `cosine_similarity`
+-   Cosine Similarity
 
 $$
 \frac{\sum_{i = 1}^{n} a_i \cdot b_i}{\sqrt{\sum_{i = 1}^{n} a_i^2} \cdot \sqrt{\sum_{i = 1}^{n} b_i^2}}
 $$
 
--   `euclidean_similarity`
+-   Euclidean Similarity
 
 $$
 \sqrt{\sum_{i = 1}^{n} (a_i - b_i)^2}
 $$
 
--   `dot_product_similarity`
+-   Dot-Product Similarity
 
 $$
 \sum_{i = 1}^{n} a_i\cdot b_i
 $$
 
--   `hamming_similarity`
+-   Hamming Similarity
 
 $$
 \frac{1}{n}\sum_{i = 1}^{n} [a_i = b_i]
@@ -50,14 +50,17 @@ TODO: merkle the entire thing? treat vectors as polys and commit to them (e.g. K
 
 ## Usage
 
-Some usage scripts (will be updated as time goes on):
+Run the examples via one of the following:
 
 ```sh
-# integer dot product example
-cargo run --example int_dot_product -- --name int_dot_product -k 8 mock
-
-# fixed point example
+# dot product similarity
+LOOKUP_BITS=12 cargo run --example dot_product -- --name dot_product -k 13 mock
+# euclidean distance
 LOOKUP_BITS=12 cargo run --example euclidean -- --name euclidean -k 13 mock
+# hamming similarity
+LOOKUP_BITS=12 cargo run --example hamming -- --name hamming -k 13 mock
+# cosine similarity
+LOOKUP_BITS=12 cargo run --example cosine -- --name cosine -k 13 mock
 ```
 
 ## Testing

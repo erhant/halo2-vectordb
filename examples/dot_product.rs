@@ -19,7 +19,7 @@ pub struct CircuitInput {
     pub b: Vec<f64>,
 }
 
-fn euclidean_distance<F: ScalarField>(
+fn dot_product<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
@@ -40,24 +40,16 @@ fn euclidean_distance<F: ScalarField>(
     let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(a);
     let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(b);
 
-    // compute difference vector (a-b)
-    let ab: Vec<AssignedValue<F>> =
-        a.iter().zip(&b).map(|(a_i, b_i)| fixed_point_chip.qsub(ctx, *a_i, *b_i)).collect();
-
-    // compute sum of squares of differences via self-inner product
-    let dist_square = fixed_point_chip.inner_product(ctx, ab.clone(), ab);
-
-    // take the square root
-    let dist = fixed_point_chip.qsqrt(ctx, dist_square);
+    // compute sum of multiplications
+    let dist: AssignedValue<F> = fixed_point_chip.inner_product(ctx, a, b);
     make_public.push(dist);
 
     let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("euclidean distance: {:?}", dist_native);
+    println!("dot product distance: {:?}", dist_native);
 }
 
 fn main() {
     env_logger::init();
-
     let args = Cli::parse();
-    run(euclidean_distance, args);
+    run(dot_product, args);
 }

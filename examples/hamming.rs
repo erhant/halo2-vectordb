@@ -40,19 +40,25 @@ fn euclidean_distance<F: ScalarField>(
     let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(a);
     let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(b);
 
-    // compute difference vector (a-b)
-    let ab: Vec<AssignedValue<F>> =
-        a.iter().zip(&b).map(|(a_i, b_i)| fixed_point_chip.qsub(ctx, *a_i, *b_i)).collect();
+    // find matching points
+    let ab: Vec<AssignedValue<F>> = a
+        .iter()
+        .zip(&b)
+        .map(|(a_i, b_i)| fixed_point_chip.gate().is_equal(ctx, *a_i, *b_i))
+        .collect();
+    let ab_sum: AssignedValue<F> = fixed_point_chip.gate().sum(ctx, ab);
 
-    // compute sum of squares of differences via self-inner product
-    let dist_square = fixed_point_chip.inner_product(ctx, ab.clone(), ab);
+    let len: F = fixed_point_chip.quantization(a.len() as f64);
+    let len: AssignedValue<F> = ctx.load_witness(len);
 
-    // take the square root
-    let dist = fixed_point_chip.qsqrt(ctx, dist_square);
+    let ab_sum_q: F = fixed_point_chip.quantization(ab_sum.value().get_lower_128() as f64);
+    let ab_sum_q: AssignedValue<F> = ctx.load_witness(ab_sum_q);
+
+    let dist: AssignedValue<F> = fixed_point_chip.qdiv(ctx, ab_sum_q, len);
+
     make_public.push(dist);
-
     let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("euclidean distance: {:?}", dist_native);
+    println!("hamming distance: {:?}", dist_native);
 }
 
 fn main() {

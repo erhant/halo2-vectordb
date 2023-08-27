@@ -19,45 +19,42 @@ pub struct CircuitInput {
     pub b: Vec<f64>,
 }
 
-fn euclidean_distance<F: ScalarField>(
+fn cosine_distance<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
     assert_eq!(input.a.len(), input.b.len());
 
-    // setup fixed-point chip
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
 
-    // quantize vectors
     let a: Vec<F> = input.a.iter().map(|a_i| fixed_point_chip.quantization(*a_i)).collect();
     let b: Vec<F> = input.b.iter().map(|b_i| fixed_point_chip.quantization(*b_i)).collect();
 
-    // assign quantizations to circuit
     let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(a);
     let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(b);
 
-    // compute difference vector (a-b)
-    let ab: Vec<AssignedValue<F>> =
-        a.iter().zip(&b).map(|(a_i, b_i)| fixed_point_chip.qsub(ctx, *a_i, *b_i)).collect();
+    let ab: AssignedValue<F> = fixed_point_chip.inner_product(ctx, a.clone(), b.clone()); // sum (a.b)
+    let aa = fixed_point_chip.inner_product(ctx, a.clone(), a); // sum (a^2)
+    let bb = fixed_point_chip.inner_product(ctx, b.clone(), b); // sum (b^2)
 
-    // compute sum of squares of differences via self-inner product
-    let dist_square = fixed_point_chip.inner_product(ctx, ab.clone(), ab);
+    let aa_sqrt = fixed_point_chip.qsqrt(ctx, aa);
+    let bb_sqrt = fixed_point_chip.qsqrt(ctx, bb);
 
-    // take the square root
-    let dist = fixed_point_chip.qsqrt(ctx, dist_square);
+    let denom = fixed_point_chip.qmul(ctx, aa_sqrt, bb_sqrt);
+    let dist = fixed_point_chip.qdiv(ctx, ab, denom);
     make_public.push(dist);
 
     let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("euclidean distance: {:?}", dist_native);
+    println!("cosine distance: {:?}", dist_native);
 }
 
 fn main() {
     env_logger::init();
 
     let args = Cli::parse();
-    run(euclidean_distance, args);
+    run(cosine_distance, args);
 }
