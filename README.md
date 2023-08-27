@@ -61,6 +61,8 @@ LOOKUP_BITS=12 cargo run --example euclidean -- --name euclidean -k 13 mock
 LOOKUP_BITS=12 cargo run --example hamming -- --name hamming -k 13 mock
 # cosine similarity
 LOOKUP_BITS=12 cargo run --example cosine -- --name cosine -k 13 mock
+# all similarities
+LOOKUP_BITS=12 cargo run --example similarities -- --name similarities -k 13 mock
 ```
 
 ## Testing

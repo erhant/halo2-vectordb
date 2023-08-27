@@ -54,7 +54,6 @@ fn cosine_distance<F: ScalarField>(
 
 fn main() {
     env_logger::init();
-
     let args = Cli::parse();
     run(cosine_distance, args);
 }

@@ -39,6 +39,18 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BI
     pub fn default(lookup_bits: usize) -> Self {
         Self::new(SimilarityStrategy::Vertical, lookup_bits)
     }
+
+    pub fn quantize(&self, x: f64) -> F {
+        self.fixed_point_gate.quantization(x)
+    }
+
+    pub fn dequantize(&self, x: F) -> f64 {
+        self.fixed_point_gate.dequantization(x)
+    }
+
+    pub fn quantize_vector(&self, a: Vec<f64>) -> Vec<F> {
+        a.iter().map(|a_i| self.fixed_point_gate.quantization(*a_i)).collect()
+    }
 }
 
 pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
@@ -112,15 +124,90 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         F: BigPrimeField,
         QA: Into<QuantumCell<F>> + Copy,
     {
+        self.fixed_point_gate.inner_product(ctx, a, b)
+    }
+
+    fn euclidean<QA>(
+        &self,
+        ctx: &mut Context<F>,
+        a: impl IntoIterator<Item = QA>,
+        b: impl IntoIterator<Item = QA>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField,
+        QA: Into<QuantumCell<F>> + Copy,
+    {
         let a: Vec<QA> = a.into_iter().collect();
         let b: Vec<QA> = b.into_iter().collect();
-        assert!(a.len() == b.len());
-        let mut res = self.qadd(ctx, Constant(F::zero()), Constant(F::zero()));
-        for (ai, bi) in a.iter().zip(b.iter()).into_iter() {
-            let ai_bi = self.qmul(ctx, *ai, *bi);
-            res = self.qadd(ctx, res, ai_bi);
-        }
+        assert_eq!(a.len(), b.len());
 
-        res
+        let ab: Vec<AssignedValue<F>> = a
+            .iter()
+            .zip(&b)
+            .map(|(a_i, b_i)| self.fixed_point_gate.qsub(ctx, *a_i, *b_i))
+            .collect();
+
+        // compute sum of squares of differences via self-inner product
+        let dist_square = self.fixed_point_gate.inner_product(ctx, ab.clone(), ab);
+
+        // take the square root
+        self.fixed_point_gate.qsqrt(ctx, dist_square)
+    }
+
+    fn cosine<QA>(
+        &self,
+        ctx: &mut Context<F>,
+        a: impl IntoIterator<Item = QA>,
+        b: impl IntoIterator<Item = QA>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField,
+        QA: Into<QuantumCell<F>> + Copy,
+    {
+        let a: Vec<QA> = a.into_iter().collect();
+        let b: Vec<QA> = b.into_iter().collect();
+        assert_eq!(a.len(), b.len());
+
+        let ab: AssignedValue<F> = self.fixed_point_gate.inner_product(ctx, a.clone(), b.clone()); // sum (a.b)
+        let aa = self.fixed_point_gate.inner_product(ctx, a.clone(), a); // sum (a^2)
+        let bb = self.fixed_point_gate.inner_product(ctx, b.clone(), b); // sum (b^2)
+
+        let aa_sqrt = self.fixed_point_gate.qsqrt(ctx, aa);
+        let bb_sqrt = self.fixed_point_gate.qsqrt(ctx, bb);
+
+        let denom = self.fixed_point_gate.qmul(ctx, aa_sqrt, bb_sqrt);
+        self.fixed_point_gate.qdiv(ctx, ab, denom)
+    }
+
+    fn hamming<QA>(
+        &self,
+        ctx: &mut Context<F>,
+        a: impl IntoIterator<Item = QA>,
+        b: impl IntoIterator<Item = QA>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField,
+        QA: Into<QuantumCell<F>> + Copy,
+    {
+        let a: Vec<QA> = a.into_iter().collect();
+        let b: Vec<QA> = b.into_iter().collect();
+        assert_eq!(a.len(), b.len());
+
+        let ab: Vec<AssignedValue<F>> = a
+            .iter()
+            .zip(&b)
+            .map(|(a_i, b_i)| self.fixed_point_gate.gate().is_equal(ctx, *a_i, *b_i))
+            .collect();
+
+        // TODO weird type error?
+        let ab_sum: AssignedValue<F> = self.fixed_point_gate.range_gate().gate().sum(ctx, ab);
+
+        let len: F = self.fixed_point_gate.quantization(a.len() as f64);
+        let len: AssignedValue<F> = ctx.load_witness(len);
+
+        let ab_sum_q: F = self.fixed_point_gate.quantization(ab_sum.value().get_lower_128() as f64);
+        let ab_sum_q: AssignedValue<F> = ctx.load_witness(ab_sum_q);
+
+        self.fixed_point_gate.qdiv(ctx, ab_sum_q, len)
     }
 }
