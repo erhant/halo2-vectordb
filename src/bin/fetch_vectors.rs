@@ -1,13 +1,10 @@
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt};
 use std::fs::read;
 use std::io::Cursor;
-use std::num::TryFromIntError;
-use std::path::{Path, PathBuf};
 
 // TODO handle errors
-fn fetch_vectors(filename: &str, dims: usize) -> Result<Vec<f32>, TryFromIntError> {
-    // let path = "./".to_owned() + filename;
-    let data_r = read("./file.fvec")?;
+fn fetch_vectors(path: &str, dims: usize) -> Vec<f32> {
+    let data_r = read(path).unwrap();
     let data_r_slice = data_r.as_slice();
 
     let num_vectors = data_r.len() / (4 + dims * 4);
@@ -16,7 +13,7 @@ fn fetch_vectors(filename: &str, dims: usize) -> Result<Vec<f32>, TryFromIntErro
     for _i in 0..num_vectors {
         // read dimension of the vector
         let dim = reader.read_u32::<LittleEndian>().unwrap();
-        if dim != dims.try_into()? {
+        if dim != dims.try_into().unwrap() {
             panic!("dim mismatch while reading the source data");
         }
 
@@ -25,9 +22,11 @@ fn fetch_vectors(filename: &str, dims: usize) -> Result<Vec<f32>, TryFromIntErro
             data_w.push(reader.read_f32::<LittleEndian>().unwrap());
         }
     }
-    Ok(data_w)
+
+    data_w
 }
 
 fn main() {
-    unimplemented!();
+    let vecs = fetch_vectors("./res/siftsmall_query.fvecs", 128);
+    println!("{:?}", vecs.len());
 }

@@ -14,35 +14,15 @@ After this, we have several vectors in the database along with a query vector. W
 -   The vector similarity algorithms should be verifiable, i.e. we need to implement chips for them.
 -   The database should be committed to, ensuring that the verifiable similarity algorithm has been used on all vectors.
 
-### Similarity Algorithms
+### Distance Metrics
 
 We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, and exposes the following similarity functions:
 
--   Cosine Similarity
-
-$$
-\frac{\sum_{i = 1}^{n} a_i \cdot b_i}{\sqrt{\sum_{i = 1}^{n} a_i^2} \cdot \sqrt{\sum_{i = 1}^{n} b_i^2}}
-$$
-
--   Euclidean Similarity
-
-$$
-\sqrt{\sum_{i = 1}^{n} (a_i - b_i)^2}
-$$
-
--   Dot-Product Similarity
-
-$$
-\sum_{i = 1}^{n} a_i\cdot b_i
-$$
-
--   Hamming Similarity
-
-$$
-\frac{1}{n}\sum_{i = 1}^{n} [a_i = b_i]
-$$
-
-TODO: if time permits, more advanced algorithms?
+-   **Cosine Similarity**: $(a \cdot b) / \left(||a|| \cdot ||b||\right)$
+-   **Manhattan Similarity**: $||a-b||_{1}$
+-   **Euclidean Similarity**: $||a-b||_{2}$
+-   **Dot-Product Similarity**: $a \cdot b$
+-   **Hamming Similarity**: $\frac{1}{n}\sum_{i = 1}^{n} [a_i = b_i]$
 
 ### Committing to a Database
 
@@ -53,21 +33,14 @@ TODO: merkle the entire thing? treat vectors as polys and commit to them (e.g. K
 Run the examples via one of the following:
 
 ```sh
-# dot product similarity
-LOOKUP_BITS=12 cargo run --example dot_product -- --name dot_product -k 13 mock
-# euclidean distance
-LOOKUP_BITS=12 cargo run --example euclidean -- --name euclidean -k 13 mock
-# hamming similarity
-LOOKUP_BITS=12 cargo run --example hamming -- --name hamming -k 13 mock
-# cosine similarity
-LOOKUP_BITS=12 cargo run --example cosine -- --name cosine -k 13 mock
-# all similarities
-LOOKUP_BITS=12 cargo run --example similarities -- --name similarities -k 13 mock
+LOOKUP_BITS=12 cargo run --example similarities -- --name similarities --input vec4 -k 13 mock
 ```
+
+You can provide a specific input via the `--input <input-name>` option.
 
 ## Testing
 
-We plan on testing our implementations over vectors from `ANN_SIFT_10K` by [Jégou et al.](https://inria.hal.science/inria-00514462/en) from [Corpus-Texmex](http://corpus-texmex.irisa.fr/), which is composed of 10K 128-dimensional vectors.
+We plan on testing our implementations over vectors from `ANN_SIFT_10K` by [Jégou et al.](https://inria.hal.science/inria-00514462/en) from [Corpus-Texmex](http://corpus-texmex.irisa.fr/), which is composed of 10K 128-dimensional vectors. We have downloaded the dataset and store it under `res` folder.
 
 ## Acknowledgements
 

@@ -21,7 +21,7 @@ pub struct CircuitInput {
 fn euclidean_distance<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
-    _: &mut Vec<AssignedValue<F>>,
+    make_public: &mut Vec<AssignedValue<F>>,
 ) {
     assert_eq!(input.a.len(), input.b.len());
 
@@ -36,18 +36,27 @@ fn euclidean_distance<F: ScalarField>(
     let dist: AssignedValue<F> = similarity_chip.euclidean(ctx, a.clone(), b.clone());
     let dist_native = similarity_chip.dequantize(*dist.value());
     println!("euclidean similarity: {:?}", dist_native);
+    make_public.push(dist);
+
+    let dist: AssignedValue<F> = similarity_chip.manhattan(ctx, a.clone(), b.clone());
+    let dist_native = similarity_chip.dequantize(*dist.value());
+    println!("manhattan similarity: {:?}", dist_native);
+    make_public.push(dist);
 
     let dist: AssignedValue<F> = similarity_chip.cosine(ctx, a.clone(), b.clone());
     let dist_native = similarity_chip.dequantize(*dist.value());
     println!("cosine similarity: {:?}", dist_native);
+    make_public.push(dist);
 
     let dist: AssignedValue<F> = similarity_chip.hamming(ctx, a.clone(), b.clone());
     let dist_native = similarity_chip.dequantize(*dist.value());
     println!("hamming similarity: {:?}", dist_native);
+    make_public.push(dist);
 
     let dist: AssignedValue<F> = similarity_chip.dot_product(ctx, a, b);
     let dist_native = similarity_chip.dequantize(*dist.value());
     println!("dot product similarity: {:?}", dist_native);
+    make_public.push(dist);
 }
 
 fn main() {

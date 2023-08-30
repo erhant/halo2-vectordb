@@ -16,3 +16,6 @@ Cargo.lock
 
 # ignore KZG
 params
+
+# ignore resources
+res

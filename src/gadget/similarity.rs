@@ -1,12 +1,9 @@
-use halo2_base::QuantumCell::{Constant, Existing, Witness};
 use halo2_base::{
-    gates::{range::RangeStrategy, GateChip, GateInstructions, RangeChip, RangeInstructions},
-    utils::{biguint_to_fe, fe_to_biguint, BigPrimeField, ScalarField},
+    gates::{GateInstructions, RangeInstructions},
+    utils::{BigPrimeField, ScalarField},
     AssignedValue, Context, QuantumCell,
 };
-use num_bigint::BigUint;
-use num_integer::Integer;
-use std::{fmt::Debug, ops::Sub};
+use std::fmt::Debug;
 
 use super::fixed_point::{FixedPointChip, FixedPointInstructions, FixedPointStrategy};
 
@@ -40,14 +37,17 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BI
         Self::new(SimilarityStrategy::Vertical, lookup_bits)
     }
 
+    /// Wrapper for `quantization` of the fixed-point chip.
     pub fn quantize(&self, x: f64) -> F {
         self.fixed_point_gate.quantization(x)
     }
 
+    /// Wrapper for `dequantization` of the fixed-point chip.
     pub fn dequantize(&self, x: F) -> f64 {
         self.fixed_point_gate.dequantization(x)
     }
 
+    /// Calls `quantize` on a vector of elements.
     pub fn quantize_vector(&self, a: Vec<f64>) -> Vec<F> {
         a.iter().map(|a_i| self.fixed_point_gate.quantization(*a_i)).collect()
     }
@@ -60,6 +60,7 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
 
     fn strategy(&self) -> SimilarityStrategy;
 
+    /// Computes the dot product of two quantized vectors.
     fn dot_product<QA>(
         &self,
         ctx: &mut Context<F>,
@@ -70,6 +71,7 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         F: BigPrimeField,
         QA: Into<QuantumCell<F>> + Copy;
 
+    /// Computes the hamming distance of two quantized vectors.
     fn hamming<QA>(
         &self,
         ctx: &mut Context<F>,
@@ -80,6 +82,7 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         F: BigPrimeField,
         QA: Into<QuantumCell<F>> + Copy;
 
+    /// Computes the Euclidean distance (L2) of two quantized vectors.
     fn euclidean<QA>(
         &self,
         ctx: &mut Context<F>,
@@ -90,7 +93,19 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         F: BigPrimeField,
         QA: Into<QuantumCell<F>> + Copy;
 
+    /// Computes the Cosine distance of two quantized vectors.
     fn cosine<QA>(
+        &self,
+        ctx: &mut Context<F>,
+        a: impl IntoIterator<Item = QA>,
+        b: impl IntoIterator<Item = QA>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField,
+        QA: Into<QuantumCell<F>> + Copy;
+
+    /// Computes the Manhattan distance (L1) of two quantized vectors.
+    fn manhattan<QA>(
         &self,
         ctx: &mut Context<F>,
         a: impl IntoIterator<Item = QA>,
@@ -209,5 +224,31 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         let ab_sum_q: AssignedValue<F> = ctx.load_witness(ab_sum_q);
 
         self.fixed_point_gate.qdiv(ctx, ab_sum_q, len)
+    }
+
+    fn manhattan<QA>(
+        &self,
+        ctx: &mut Context<F>,
+        a: impl IntoIterator<Item = QA>,
+        b: impl IntoIterator<Item = QA>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField,
+        QA: Into<QuantumCell<F>> + Copy,
+    {
+        let a: Vec<QA> = a.into_iter().collect();
+        let b: Vec<QA> = b.into_iter().collect();
+        assert_eq!(a.len(), b.len());
+
+        let ab_diff: Vec<AssignedValue<F>> = a
+            .iter()
+            .zip(&b)
+            .map(|(a_i, b_i)| self.fixed_point_gate.qsub(ctx, *a_i, *b_i))
+            .collect();
+
+        let ab_diff_abs: Vec<AssignedValue<F>> =
+            ab_diff.iter().map(|d| self.fixed_point_gate.qabs(ctx, *d)).collect();
+
+        self.fixed_point_gate.range_gate().gate().sum(ctx, ab_diff_abs)
     }
 }
