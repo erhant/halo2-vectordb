@@ -38,11 +38,10 @@ fn merkle_poseidon<F: ScalarField>(
     let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
-    // quantize everything
     let database: Vec<Vec<AssignedValue<F>>> = input
         .database
         .iter()
-        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(v.to_vec())))
+        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(&v)))
         .collect();
 
     let root = similarity_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);

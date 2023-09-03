@@ -33,8 +33,8 @@ fn euclidean_distance<F: ScalarField>(
     const PRECISION_BITS: u32 = 32;
     let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
 
-    let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(input.a));
-    let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(input.b));
+    let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(&input.a));
+    let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(&input.b));
 
     let dist: AssignedValue<F> = similarity_chip.euclidean_distance(ctx, &a, &b);
     let dist_native = similarity_chip.dequantize(*dist.value());

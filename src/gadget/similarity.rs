@@ -49,7 +49,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BI
     }
 
     /// Calls `quantize` on a vector of elements.
-    pub fn quantize_vector(&self, a: Vec<f64>) -> Vec<F> {
+    pub fn quantize_vector(&self, a: &Vec<f64>) -> Vec<F> {
         a.iter().map(|a_i| self.fixed_point_gate.quantization(*a_i)).collect()
     }
 }

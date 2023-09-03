@@ -34,13 +34,12 @@ fn exhaustive<F: ScalarField>(
     const PRECISION_BITS: u32 = 32;
     let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
 
-    // quantize everything
     let query: Vec<AssignedValue<F>> =
-        ctx.assign_witnesses(similarity_chip.quantize_vector(input.query));
+        ctx.assign_witnesses(similarity_chip.quantize_vector(&input.query));
     let database: Vec<Vec<AssignedValue<F>>> = input
         .database
         .iter()
-        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(v.to_vec())))
+        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(&v)))
         .collect();
 
     // compute distance to each vector

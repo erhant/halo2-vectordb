@@ -13,12 +13,12 @@ use halo2_scaffold::gadget::{
 };
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::env::var;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput {
-    pub k: String,
     pub vectors: Vec<Vec<f64>>,
 }
 
@@ -35,20 +35,33 @@ fn kmeans<F: ScalarField>(
     let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
 
     // load k
-    let k = F::from_str_vartime(&input.k).unwrap();
-    let k = ctx.load_witness(k);
+    const K: usize = 4;
 
-    // quantize everything
-    let database: Vec<Vec<AssignedValue<F>>> = input
+    let vectors: Vec<Vec<AssignedValue<F>>> = input
         .vectors
         .iter()
-        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(v.to_vec())))
+        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(&v)))
         .collect();
 
-    // k-means with N iteraitons
+    // choose initial centroids (just first few vectors)
+    let centroids: [Vec<AssignedValue<F>>; K] = vectors.as_slice().get(0..K).unwrap();
+    let centroid_labels: [AssignedValue<F>; K] = ctx.assign_witnesses(
+        centroids.iter().enumerate().map(|(i, _)| F::from(i as u64)).collect::<Vec<F>>(),
+    );
+
+    // labels, initially zero
+    // TODO: is this line needed?
+    let vector_labels: Vec<AssignedValue<F>> =
+        ctx.assign_witnesses(vec![F::from(0); vectors.len()]);
+
+    // k-means with fixed number of iteraitons
     const NUM_ITERS: usize = 10;
     for i in 0..NUM_ITERS {
-        // assign points closest to centroids
+        // compute distances between each data point and the set of centroids
+        // and assign each data point to the closest centroid
+
+        // select all data points that belong to cluster i and compute
+        // the mean of these data points (each feature individually)
     }
 }
 
