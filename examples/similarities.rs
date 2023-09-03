@@ -6,7 +6,10 @@ use halo2_base::{
     Context,
     QuantumCell::{Constant, Existing, Witness},
 };
-use halo2_scaffold::gadget::similarity::{SimilarityChip, SimilarityInstructions};
+use halo2_scaffold::gadget::{
+    fixed_point::FixedPointInstructions,
+    similarity::{SimilarityChip, SimilarityInstructions},
+};
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
 use serde::{Deserialize, Serialize};
@@ -30,32 +33,32 @@ fn euclidean_distance<F: ScalarField>(
     const PRECISION_BITS: u32 = 32;
     let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
 
-    let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(input.a));
-    let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(input.b));
+    let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(&input.a));
+    let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(similarity_chip.quantize_vector(&input.b));
 
-    let dist: AssignedValue<F> = similarity_chip.euclidean(ctx, a.clone(), b.clone());
+    let dist: AssignedValue<F> = similarity_chip.euclidean_distance(ctx, &a, &b);
     let dist_native = similarity_chip.dequantize(*dist.value());
-    println!("euclidean similarity: {:?}", dist_native);
+    println!("euclidean distance: {:?}", dist_native);
     make_public.push(dist);
 
-    let dist: AssignedValue<F> = similarity_chip.manhattan(ctx, a.clone(), b.clone());
+    let dist: AssignedValue<F> = similarity_chip.manhattan_distance(ctx, &a, &b);
     let dist_native = similarity_chip.dequantize(*dist.value());
-    println!("manhattan similarity: {:?}", dist_native);
+    println!("manhattan distance: {:?}", dist_native);
     make_public.push(dist);
 
-    let dist: AssignedValue<F> = similarity_chip.cosine(ctx, a.clone(), b.clone());
+    let dist: AssignedValue<F> = similarity_chip.cosine_similarity(ctx, &a, &b);
     let dist_native = similarity_chip.dequantize(*dist.value());
     println!("cosine similarity: {:?}", dist_native);
     make_public.push(dist);
 
-    let dist: AssignedValue<F> = similarity_chip.hamming(ctx, a.clone(), b.clone());
+    let dist: AssignedValue<F> = similarity_chip.hamming_similarity(ctx, &a, &b);
     let dist_native = similarity_chip.dequantize(*dist.value());
     println!("hamming similarity: {:?}", dist_native);
     make_public.push(dist);
 
-    let dist: AssignedValue<F> = similarity_chip.dot_product(ctx, a, b);
+    let dist: AssignedValue<F> = similarity_chip.fixed_point_gate.inner_product(ctx, a, b);
     let dist_native = similarity_chip.dequantize(*dist.value());
-    println!("dot product similarity: {:?}", dist_native);
+    println!("dot product: {:?}", dist_native);
     make_public.push(dist);
 }
 

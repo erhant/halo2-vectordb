@@ -34,6 +34,12 @@ Run the examples via one of the following:
 
 ```sh
 LOOKUP_BITS=12 cargo run --example similarities -- --name similarities --input vec4 -k 13 mock
+
+LOOKUP_BITS=12 cargo run --example exhaustive -- --name exhaustive -k 13 mock
+
+LOOKUP_BITS=12 cargo run --example merkle_poseidon -- --name merkle_poseidon -k 13 mock
+
+LOOKUP_BITS=12 cargo run --example exhaustive_merkle -- --name exhaustive_merkle --input query1.in -k 13 mock
 ```
 
 You can provide a specific input via the `--input <input-name>` option.

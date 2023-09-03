@@ -36,10 +36,8 @@ fn int_div_32<F: ScalarField>(
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
     let x = F::from_str_vartime(&input.x).unwrap();
-    // private
-    let x = ctx.load_witness(x);
-    // public
-    make_public.push(x);
+    let x = ctx.load_witness(x); // private
+    make_public.push(x); // public
 
     // needs to be compatible with some backend setup, so read from environmental variable
     let lookup_bits =

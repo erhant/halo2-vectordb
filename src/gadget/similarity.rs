@@ -1,8 +1,9 @@
 use halo2_base::{
     gates::{GateInstructions, RangeInstructions},
     utils::{BigPrimeField, ScalarField},
-    AssignedValue, Context, QuantumCell,
+    AssignedValue, Context,
 };
+use poseidon::PoseidonChip;
 use std::fmt::Debug;
 
 use super::fixed_point::{FixedPointChip, FixedPointInstructions, FixedPointStrategy};
@@ -48,7 +49,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BI
     }
 
     /// Calls `quantize` on a vector of elements.
-    pub fn quantize_vector(&self, a: Vec<f64>) -> Vec<F> {
+    pub fn quantize_vector(&self, a: &Vec<f64>) -> Vec<F> {
         a.iter().map(|a_i| self.fixed_point_gate.quantization(*a_i)).collect()
     }
 }
@@ -60,60 +61,67 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
 
     fn strategy(&self) -> SimilarityStrategy;
 
-    /// Computes the dot product of two quantized vectors.
-    fn dot_product<QA>(
-        &self,
-        ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
-    ) -> AssignedValue<F>
-    where
-        F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy;
-
     /// Computes the hamming distance of two quantized vectors.
-    fn hamming<QA>(
+    fn hamming_similarity(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy;
+        F: BigPrimeField;
 
     /// Computes the Euclidean distance (L2) of two quantized vectors.
-    fn euclidean<QA>(
+    fn euclidean_distance(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy;
+        F: BigPrimeField;
 
-    /// Computes the Cosine distance of two quantized vectors.
-    fn cosine<QA>(
+    /// Computes the Cosine similarity of two quantized vectors.
+    fn cosine_similarity(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy;
+        F: BigPrimeField;
 
     /// Computes the Manhattan distance (L1) of two quantized vectors.
-    fn manhattan<QA>(
+    fn manhattan_distance(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy;
+        F: BigPrimeField;
+
+    /// Given a query vector, returns the most similar vector
+    /// TODO: take distance function as argument here
+    fn nearest_vector(
+        &self,
+        ctx: &mut Context<F>,
+        query: &Vec<AssignedValue<F>>,
+        vectors: &Vec<Vec<AssignedValue<F>>>,
+    ) -> Vec<AssignedValue<F>>
+    where
+        F: BigPrimeField;
+
+    /// Commits to an array of vectors.
+    /// TODO: allow non-power-of-two lengths
+    fn merkle_commitment<const T: usize, const RATE: usize>(
+        &self,
+        ctx: &mut Context<F>,
+        poseidon: &mut PoseidonChip<F, T, RATE>,
+        vectors: &Vec<Vec<AssignedValue<F>>>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField;
 }
 
 impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PRECISION_BITS>
@@ -129,38 +137,19 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         self.strategy
     }
 
-    fn dot_product<QA>(
+    fn euclidean_distance(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
         F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy,
     {
-        self.fixed_point_gate.inner_product(ctx, a, b)
-    }
-
-    fn euclidean<QA>(
-        &self,
-        ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
-    ) -> AssignedValue<F>
-    where
-        F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy,
-    {
-        let a: Vec<QA> = a.into_iter().collect();
-        let b: Vec<QA> = b.into_iter().collect();
         assert_eq!(a.len(), b.len());
 
-        let ab: Vec<AssignedValue<F>> = a
-            .iter()
-            .zip(&b)
-            .map(|(a_i, b_i)| self.fixed_point_gate.qsub(ctx, *a_i, *b_i))
-            .collect();
+        let ab: Vec<AssignedValue<F>> =
+            a.iter().zip(b).map(|(a_i, b_i)| self.fixed_point_gate.qsub(ctx, *a_i, *b_i)).collect();
 
         // compute sum of squares of differences via self-inner product
         let dist_square = self.fixed_point_gate.inner_product(ctx, ab.clone(), ab);
@@ -169,23 +158,20 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         self.fixed_point_gate.qsqrt(ctx, dist_square)
     }
 
-    fn cosine<QA>(
+    fn cosine_similarity(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
         F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy,
     {
-        let a: Vec<QA> = a.into_iter().collect();
-        let b: Vec<QA> = b.into_iter().collect();
         assert_eq!(a.len(), b.len());
 
         let ab: AssignedValue<F> = self.fixed_point_gate.inner_product(ctx, a.clone(), b.clone()); // sum (a.b)
-        let aa = self.fixed_point_gate.inner_product(ctx, a.clone(), a); // sum (a^2)
-        let bb = self.fixed_point_gate.inner_product(ctx, b.clone(), b); // sum (b^2)
+        let aa = self.fixed_point_gate.inner_product(ctx, a.clone(), a.clone()); // sum (a^2)
+        let bb = self.fixed_point_gate.inner_product(ctx, b.clone(), b.clone()); // sum (b^2)
 
         let aa_sqrt = self.fixed_point_gate.qsqrt(ctx, aa);
         let bb_sqrt = self.fixed_point_gate.qsqrt(ctx, bb);
@@ -194,27 +180,23 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         self.fixed_point_gate.qdiv(ctx, ab, denom)
     }
 
-    fn hamming<QA>(
+    fn hamming_similarity(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
         F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy,
     {
-        let a: Vec<QA> = a.into_iter().collect();
-        let b: Vec<QA> = b.into_iter().collect();
         assert_eq!(a.len(), b.len());
 
         let ab: Vec<AssignedValue<F>> = a
             .iter()
-            .zip(&b)
+            .zip(b)
             .map(|(a_i, b_i)| self.fixed_point_gate.gate().is_equal(ctx, *a_i, *b_i))
             .collect();
 
-        // TODO weird type error?
         let ab_sum: AssignedValue<F> = self.fixed_point_gate.range_gate().gate().sum(ctx, ab);
 
         let len: F = self.fixed_point_gate.quantization(a.len() as f64);
@@ -226,29 +208,98 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         self.fixed_point_gate.qdiv(ctx, ab_sum_q, len)
     }
 
-    fn manhattan<QA>(
+    fn manhattan_distance(
         &self,
         ctx: &mut Context<F>,
-        a: impl IntoIterator<Item = QA>,
-        b: impl IntoIterator<Item = QA>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
         F: BigPrimeField,
-        QA: Into<QuantumCell<F>> + Copy,
     {
-        let a: Vec<QA> = a.into_iter().collect();
-        let b: Vec<QA> = b.into_iter().collect();
         assert_eq!(a.len(), b.len());
 
-        let ab_diff: Vec<AssignedValue<F>> = a
-            .iter()
-            .zip(&b)
-            .map(|(a_i, b_i)| self.fixed_point_gate.qsub(ctx, *a_i, *b_i))
-            .collect();
+        let ab_diff: Vec<AssignedValue<F>> =
+            a.iter().zip(b).map(|(a_i, b_i)| self.fixed_point_gate.qsub(ctx, *a_i, *b_i)).collect();
 
         let ab_diff_abs: Vec<AssignedValue<F>> =
             ab_diff.iter().map(|d| self.fixed_point_gate.qabs(ctx, *d)).collect();
 
         self.fixed_point_gate.range_gate().gate().sum(ctx, ab_diff_abs)
+    }
+
+    fn nearest_vector(
+        &self,
+        ctx: &mut Context<F>,
+        query: &Vec<AssignedValue<F>>,
+        vectors: &Vec<Vec<AssignedValue<F>>>, // TODO: use trait?
+    ) -> Vec<AssignedValue<F>>
+    where
+        F: BigPrimeField,
+    {
+        // compute distance to each vector
+        let distances: Vec<AssignedValue<F>> =
+            vectors.iter().map(|v| self.euclidean_distance(ctx, v, query)).collect();
+
+        // find the minimum
+        let min: AssignedValue<F> = distances
+            .clone() // TODO: can we use `iter` with reduce? maybe yes with fold
+            .into_iter()
+            .reduce(|acc, d| self.fixed_point_gate().qmin(ctx, acc, d))
+            .expect("unexpected error");
+        let min_indicator: Vec<AssignedValue<F>> = distances
+            .into_iter()
+            .map(|d| self.fixed_point_gate().range_gate().gate.is_equal(ctx, min, d))
+            .collect();
+
+        // get the most similar vector by selecting each index with indicator
+        let result: Vec<AssignedValue<F>> = (0..vectors[0].len())
+            .map(|i| {
+                self.fixed_point_gate().range_gate().gate.select_by_indicator(
+                    ctx,
+                    vectors.iter().map(|d| d[i]),
+                    min_indicator.iter().copied(),
+                )
+            })
+            .collect();
+
+        result
+    }
+
+    fn merkle_commitment<const T: usize, const RATE: usize>(
+        &self,
+        ctx: &mut Context<F>,
+        poseidon: &mut PoseidonChip<F, T, RATE>,
+        vectors: &Vec<Vec<AssignedValue<F>>>,
+    ) -> AssignedValue<F>
+    where
+        F: BigPrimeField,
+    {
+        // hash vectors in db
+        let hashes: Vec<AssignedValue<F>> = vectors
+            .iter()
+            .map(|v| {
+                poseidon.clear();
+                poseidon.update(&v.as_slice());
+                poseidon.squeeze(ctx, self.fixed_point_gate().range_gate().gate()).unwrap()
+            })
+            .collect();
+
+        // construct merklee tree from the hashes
+        let mut leaves: Vec<AssignedValue<F>> = hashes; // TODO: make this extend with zeros for powers of two
+        while leaves.len() > 1 {
+            assert!((leaves.len() & (leaves.len() - 1)) == 0);
+            let mut next_leaves = Vec::with_capacity(leaves.len() / 2);
+            for i in (0..leaves.len()).step_by(2) {
+                poseidon.clear();
+                poseidon.update(&[leaves[i], leaves[i + 1]]);
+                next_leaves.push(
+                    poseidon.squeeze(ctx, self.fixed_point_gate().range_gate().gate()).unwrap(),
+                );
+            }
+            leaves = next_leaves;
+        }
+        assert!(leaves.len() == 1);
+        leaves[0]
     }
 }
