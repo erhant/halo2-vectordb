@@ -21,3 +21,27 @@ We can do the following:
 -   [Post by Labelbox](https://labelbox.com/blog/how-vector-similarity-search-works/)
 -   [Post by Pinecone](https://www.pinecone.io/learn/vector-similarity/)
 -   [LSH by Pinecone](https://www.pinecone.io/learn/series/faiss/locality-sensitive-hashing/)
+
+## Space Partioning (IVF)
+
+To reduce the number of vectors to compare, we may do space partitioning:
+
+-   Compute a set of `C` centroids (clusters).
+-   Compare query `q` to to each centroid, choose to most similar `c_i`.
+-   Then, find the most similar vector `v` from the cluster `i`, return the most similar vector along with a Merkle root.
+
+The query phase and indexing phase will be split.
+
+-   During the query phase, verifier will compute the similar vector exhaustively and the circuit will return the proof: "the computed vector `v` is the most similar to `q` among the vectors with Merkle root `m`".
+
+-   During the indexing phase, the db must provide several proofs regarding the merkle roots. In particular, given a set of vectors `V` it will compute a set of centroid vectors `c` and output the following:
+
+    -   merkle root of `V`
+    -   `k` for the k-means
+    -   hash of centroid `c_0`
+    -   merkle root of vectors belonging to cluster of `c_0`
+    -   hash of centroid `c_1`
+    -   merkle root of vectors belonging to cluster of `c_1`
+    -   ...
+    -   hash of centroid `c_k`
+    -   merkle root of vectors belonging to cluster of `c_k`

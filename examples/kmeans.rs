@@ -18,36 +18,37 @@ use std::env::var;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput {
-    pub query: Vec<f64>,
-    pub database: Vec<Vec<f64>>,
+    pub k: String,
+    pub vectors: Vec<Vec<f64>>,
 }
 
-fn exhaustive<F: ScalarField>(
+fn kmeans<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
-    assert!(input.database.iter().all(|vec| vec.len() == input.query.len()));
+    assert!(input.vectors.iter().all(|vec| vec.len() == input.vectors[0].len()));
 
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
     let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
 
+    // load k
+    let k = F::from_str_vartime(&input.k).unwrap();
+    let k = ctx.load_witness(k);
+
     // quantize everything
-    let query: Vec<AssignedValue<F>> =
-        ctx.assign_witnesses(similarity_chip.quantize_vector(input.query));
     let database: Vec<Vec<AssignedValue<F>>> = input
-        .database
+        .vectors
         .iter()
         .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(v.to_vec())))
         .collect();
 
-    // compute distance to each vector
-    let result = similarity_chip.nearest_vector(ctx, &query, &database);
-    make_public.extend(result.iter());
-    for e in result {
-        println!("{:?}", similarity_chip.dequantize(*e.value()));
+    // k-means with N iteraitons
+    const NUM_ITERS: usize = 10;
+    for i in 0..NUM_ITERS {
+        // assign points closest to centroids
     }
 }
 
@@ -55,5 +56,5 @@ fn main() {
     env_logger::init();
 
     let args = Cli::parse();
-    run(exhaustive, args);
+    run(kmeans, args);
 }
