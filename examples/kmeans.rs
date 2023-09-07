@@ -1,5 +1,5 @@
 use clap::Parser;
-use halo2_base::gates::{GateChip, GateInstructions};
+use halo2_base::gates::GateInstructions;
 use halo2_base::utils::ScalarField;
 use halo2_base::AssignedValue;
 #[allow(unused_imports)]
@@ -13,7 +13,6 @@ use halo2_scaffold::gadget::{
 };
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
-use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::env::var;
 
@@ -44,24 +43,61 @@ fn kmeans<F: ScalarField>(
         .collect();
 
     // choose initial centroids (just first few vectors)
-    let centroids: [Vec<AssignedValue<F>>; K] = vectors.as_slice().get(0..K).unwrap();
-    let centroid_labels: [AssignedValue<F>; K] = ctx.assign_witnesses(
-        centroids.iter().enumerate().map(|(i, _)| F::from(i as u64)).collect::<Vec<F>>(),
-    );
-
-    // labels, initially zero
-    // TODO: is this line needed?
-    let vector_labels: Vec<AssignedValue<F>> =
-        ctx.assign_witnesses(vec![F::from(0); vectors.len()]);
+    let centroids: Vec<Vec<AssignedValue<F>>> = vectors.as_slice().get(0..K).unwrap().to_vec();
 
     // k-means with fixed number of iteraitons
     const NUM_ITERS: usize = 10;
-    for i in 0..NUM_ITERS {
+    for _ in 0..NUM_ITERS {
         // compute distances between each data point and the set of centroids
-        // and assign each data point to the closest centroid
+        // assign each data point to the closest centroid
+        //
+        // instead of assigning an id to each vector, we store an indicator (one-hot encoding)
+        let vector_cluster_indicators: Vec<Vec<AssignedValue<F>>> = vectors
+            .iter()
+            .map(|v| {
+                // compute distance to centroids
+                let distances: Vec<AssignedValue<F>> = centroids
+                    .iter()
+                    .map(|c| similarity_chip.euclidean_distance(ctx, c, v))
+                    .collect();
 
-        // select all data points that belong to cluster i and compute
-        // the mean of these data points (each feature individually)
+                // find the minimum
+                let min: AssignedValue<F> = distances
+                    .clone()
+                    .into_iter()
+                    .reduce(|acc, d| similarity_chip.fixed_point_gate().qmin(ctx, acc, d))
+                    .expect("unexpected error");
+
+                // return indicator
+                distances
+                    .into_iter()
+                    .map(|d| {
+                        similarity_chip.fixed_point_gate().range_gate().gate.is_equal(ctx, min, d)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // compute cluster sizes
+        //
+        // index-wise summation of indicators will give the cluster sizes
+        let cluster_sizes: Vec<AssignedValue<F>> = vector_cluster_indicators
+            .into_iter()
+            .reduce(|acc, cluster_indicator| {
+                acc.into_iter()
+                    .zip(cluster_indicator)
+                    .map(|(a, c)| similarity_chip.fixed_point_gate().gate().add(ctx, a, c))
+                    .collect()
+            })
+            .unwrap();
+
+        // for each cluster `i` and compute the mean of vectors
+        //
+        // we can use indicator indices for each cluster, by multiplying the results
+        // with the indicator which is known to be 1 or 0
+        for ci in 0..K {
+            centroids[i] = vectors.iter().reduce(|acc, v| {})
+        }
     }
 }
 
