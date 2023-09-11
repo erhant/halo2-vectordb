@@ -16,24 +16,23 @@ After this, we have several vectors in the database along with a query vector. W
 
 ### Distance Metrics
 
-We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, and exposes the following similarity functions:
+We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, and exposes the following metrics:
 
--   **Cosine Similarity**: $(a \cdot b) / \left(||a|| \cdot ||b||\right)$
--   **Manhattan Similarity**: $||a-b||_{1}$
--   **Euclidean Similarity**: $||a-b||_{2}$
--   **Dot-Product Similarity**: $a \cdot b$
--   **Hamming Similarity**: $\frac{1}{n}\sum_{i = 1}^{n} [a_i = b_i]$
+-   **Cosine Similarity**
+-   **Hamming Similarity**
+-   **Manhattan Distance**
+-   **Euclidean Distance**
 
 ### Committing to a Database
 
-TODO: merkle the entire thing? treat vectors as polys and commit to them (e.g. KZG?)
+For each computation, the prover commits to the vectors used in the process. For example, an exhaustive search over the entire database results in a vector that is most similar to the query, along with a Merkle root over the entire database, where the leave nodes are Poseidon hashes of the quantized vectors.
 
 ## Usage
 
 Run the examples via one of the following:
 
 ```sh
-LOOKUP_BITS=12 cargo run --example similarities -- --name similarities --input vec4 -k 13 mock
+LOOKUP_BITS=12 cargo run --example similarities -- --name similarities --input vec4.in -k 13 mock
 
 LOOKUP_BITS=12 cargo run --example exhaustive -- --name exhaustive -k 13 mock
 
