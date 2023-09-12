@@ -1,7 +1,7 @@
 use std::env::var;
 
 use clap::Parser;
-use halo2_base::gates::{GateChip, GateInstructions, RangeChip};
+use halo2_base::gates::{GateInstructions, RangeChip};
 use halo2_base::safe_types::RangeInstructions;
 use halo2_base::utils::ScalarField;
 use halo2_base::AssignedValue;

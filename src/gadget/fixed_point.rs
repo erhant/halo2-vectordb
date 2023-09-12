@@ -28,7 +28,7 @@ use halo2_base::{
 };
 use num_bigint::BigUint;
 use num_integer::Integer;
-use std::{fmt::Debug, ops::Sub};
+use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FixedPointStrategy {

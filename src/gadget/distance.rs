@@ -1,6 +1,6 @@
 use halo2_base::{
     gates::{GateInstructions, RangeInstructions},
-    utils::{BigPrimeField, ScalarField},
+    utils::ScalarField,
     AssignedValue, Context,
 };
 use poseidon::PoseidonChip;
@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use super::fixed_point::{FixedPointChip, FixedPointInstructions, FixedPointStrategy};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum SimilarityStrategy {
+pub enum DistanceStrategy {
     Vertical, // vanilla implementation with vertical basic gate(s)
 }
 
@@ -17,16 +17,16 @@ pub enum SimilarityStrategy {
 /// For example, `PRECISION_BITS = 32` indicates this chip implements 32.32 fixed point decimal arithmetics.
 /// The valid range of the fixed point decimal is -max_value < x < max_value.
 #[derive(Clone, Debug)]
-pub struct SimilarityChip<F: BigPrimeField, const PRECISION_BITS: u32> {
-    strategy: SimilarityStrategy,
+pub struct DistanceChip<F: ScalarField, const PRECISION_BITS: u32> {
+    strategy: DistanceStrategy,
     pub fixed_point_gate: FixedPointChip<F, PRECISION_BITS>,
 }
 
-impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BITS> {
-    pub fn new(strategy: SimilarityStrategy, lookup_bits: usize) -> Self {
+impl<F: ScalarField, const PRECISION_BITS: u32> DistanceChip<F, PRECISION_BITS> {
+    pub fn new(strategy: DistanceStrategy, lookup_bits: usize) -> Self {
         let fixed_point_gate = FixedPointChip::<F, PRECISION_BITS>::new(
             match strategy {
-                SimilarityStrategy::Vertical => FixedPointStrategy::Vertical,
+                DistanceStrategy::Vertical => FixedPointStrategy::Vertical,
             },
             lookup_bits,
         );
@@ -35,7 +35,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BI
     }
 
     pub fn default(lookup_bits: usize) -> Self {
-        Self::new(SimilarityStrategy::Vertical, lookup_bits)
+        Self::new(DistanceStrategy::Vertical, lookup_bits)
     }
 
     /// Wrapper for `quantization` of the fixed-point chip.
@@ -54,42 +54,23 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityChip<F, PRECISION_BI
     }
 }
 
-pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
+pub trait DistanceInstructions<F: ScalarField, const PRECISION_BITS: u32> {
     type FixedPointGate: FixedPointInstructions<F, PRECISION_BITS>;
 
     fn fixed_point_gate(&self) -> &Self::FixedPointGate;
 
-    fn strategy(&self) -> SimilarityStrategy;
+    fn strategy(&self) -> DistanceStrategy;
 
     /// Computes the hamming distance of two quantized vectors.
-    fn hamming_similarity(
+    /// This is equal to (1 - HammingDistance).
+    fn hamming_distance(
         &self,
         ctx: &mut Context<F>,
         a: &Vec<AssignedValue<F>>,
         b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField;
-
-    /// Computes the Euclidean distance (L2) of two quantized vectors.
-    fn euclidean_distance(
-        &self,
-        ctx: &mut Context<F>,
-        a: &Vec<AssignedValue<F>>,
-        b: &Vec<AssignedValue<F>>,
-    ) -> AssignedValue<F>
-    where
-        F: BigPrimeField;
-
-    /// Computes the Cosine similarity of two quantized vectors.
-    fn cosine_similarity(
-        &self,
-        ctx: &mut Context<F>,
-        a: &Vec<AssignedValue<F>>,
-        b: &Vec<AssignedValue<F>>,
-    ) -> AssignedValue<F>
-    where
-        F: BigPrimeField;
+        F: ScalarField;
 
     /// Computes the Manhattan distance (L1) of two quantized vectors.
     fn manhattan_distance(
@@ -99,7 +80,28 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField;
+        F: ScalarField;
+
+    /// Computes the Euclidean distance (L2) of two quantized vectors.
+    fn euclidean_distance(
+        &self,
+        ctx: &mut Context<F>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
+    ) -> AssignedValue<F>
+    where
+        F: ScalarField;
+
+    /// Computes the Cosine distance of two quantized vectors.
+    /// This is equal to (1 - CosineDistance).
+    fn cosine_distance(
+        &self,
+        ctx: &mut Context<F>,
+        a: &Vec<AssignedValue<F>>,
+        b: &Vec<AssignedValue<F>>,
+    ) -> AssignedValue<F>
+    where
+        F: ScalarField;
 
     /// Given a query vector, returns the most similar vector
     /// TODO: take distance function as argument here
@@ -110,7 +112,7 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         vectors: &Vec<Vec<AssignedValue<F>>>,
     ) -> Vec<AssignedValue<F>>
     where
-        F: BigPrimeField;
+        F: ScalarField;
 
     /// Commits to an array of vectors.
     /// TODO: allow non-power-of-two lengths
@@ -121,11 +123,11 @@ pub trait SimilarityInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         vectors: &Vec<Vec<AssignedValue<F>>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField;
+        F: ScalarField;
 }
 
-impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PRECISION_BITS>
-    for SimilarityChip<F, PRECISION_BITS>
+impl<F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PRECISION_BITS>
+    for DistanceChip<F, PRECISION_BITS>
 {
     type FixedPointGate = FixedPointChip<F, PRECISION_BITS>;
 
@@ -133,7 +135,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         &self.fixed_point_gate
     }
 
-    fn strategy(&self) -> SimilarityStrategy {
+    fn strategy(&self) -> DistanceStrategy {
         self.strategy
     }
 
@@ -144,7 +146,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
+        F: ScalarField,
     {
         assert_eq!(a.len(), b.len());
 
@@ -158,36 +160,39 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         self.fixed_point_gate.qsqrt(ctx, dist_square)
     }
 
-    fn cosine_similarity(
+    fn cosine_distance(
         &self,
         ctx: &mut Context<F>,
         a: &Vec<AssignedValue<F>>,
         b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
+        F: ScalarField,
     {
         assert_eq!(a.len(), b.len());
 
         let ab: AssignedValue<F> = self.fixed_point_gate.inner_product(ctx, a.clone(), b.clone()); // sum (a.b)
-        let aa = self.fixed_point_gate.inner_product(ctx, a.clone(), a.clone()); // sum (a^2)
+        let aa = self.fixed_point_gate().inner_product(ctx, a.clone(), a.clone()); // sum (a^2)
         let bb = self.fixed_point_gate.inner_product(ctx, b.clone(), b.clone()); // sum (b^2)
 
         let aa_sqrt = self.fixed_point_gate.qsqrt(ctx, aa);
         let bb_sqrt = self.fixed_point_gate.qsqrt(ctx, bb);
 
         let denom = self.fixed_point_gate.qmul(ctx, aa_sqrt, bb_sqrt);
-        self.fixed_point_gate.qdiv(ctx, ab, denom)
+        let sim = self.fixed_point_gate.qdiv(ctx, ab, denom);
+
+        let one = ctx.load_constant(self.quantize(1.0));
+        self.fixed_point_gate.qsub(ctx, one, sim)
     }
 
-    fn hamming_similarity(
+    fn hamming_distance(
         &self,
         ctx: &mut Context<F>,
         a: &Vec<AssignedValue<F>>,
         b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
+        F: ScalarField,
     {
         assert_eq!(a.len(), b.len());
 
@@ -205,7 +210,10 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         let ab_sum_q: F = self.fixed_point_gate.quantization(ab_sum.value().get_lower_128() as f64);
         let ab_sum_q: AssignedValue<F> = ctx.load_witness(ab_sum_q);
 
-        self.fixed_point_gate.qdiv(ctx, ab_sum_q, len)
+        let sim = self.fixed_point_gate.qdiv(ctx, ab_sum_q, len);
+
+        let one = ctx.load_constant(self.quantize(1.0));
+        self.fixed_point_gate.qsub(ctx, one, sim)
     }
 
     fn manhattan_distance(
@@ -215,7 +223,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         b: &Vec<AssignedValue<F>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
+        F: ScalarField,
     {
         assert_eq!(a.len(), b.len());
 
@@ -232,10 +240,11 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         &self,
         ctx: &mut Context<F>,
         query: &Vec<AssignedValue<F>>,
-        vectors: &Vec<Vec<AssignedValue<F>>>, // TODO: use trait?
+        vectors: &Vec<Vec<AssignedValue<F>>>,
+        // TODO: ask for distance metric function here
     ) -> Vec<AssignedValue<F>>
     where
-        F: BigPrimeField,
+        F: ScalarField,
     {
         // compute distance to each vector
         let distances: Vec<AssignedValue<F>> =
@@ -243,10 +252,10 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
 
         // find the minimum
         let min: AssignedValue<F> = distances
-            .clone() // TODO: can we use `iter` with reduce? maybe yes with fold
+            .clone()
             .into_iter()
             .reduce(|acc, d| self.fixed_point_gate().qmin(ctx, acc, d))
-            .expect("unexpected error");
+            .unwrap();
         let min_indicator: Vec<AssignedValue<F>> = distances
             .into_iter()
             .map(|d| self.fixed_point_gate().range_gate().gate.is_equal(ctx, min, d))
@@ -273,7 +282,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         vectors: &Vec<Vec<AssignedValue<F>>>,
     ) -> AssignedValue<F>
     where
-        F: BigPrimeField,
+        F: ScalarField,
     {
         // hash vectors in db
         let hashes: Vec<AssignedValue<F>> = vectors
@@ -288,6 +297,7 @@ impl<F: BigPrimeField, const PRECISION_BITS: u32> SimilarityInstructions<F, PREC
         // construct merklee tree from the hashes
         let mut leaves: Vec<AssignedValue<F>> = hashes; // TODO: make this extend with zeros for powers of two
         while leaves.len() > 1 {
+            // assert that the number of leaves is a power of two
             assert!((leaves.len() & (leaves.len() - 1)) == 0);
             let mut next_leaves = Vec::with_capacity(leaves.len() / 2);
             for i in (0..leaves.len()).step_by(2) {

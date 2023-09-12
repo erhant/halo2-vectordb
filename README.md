@@ -16,10 +16,10 @@ After this, we have several vectors in the database along with a query vector. W
 
 ### Distance Metrics
 
-We provide a `SimilarityChip` that operate on two vectors $a, b$ of length $n$, and exposes the following metrics:
+We provide a `DistanceChip` that operate on two vectors $a, b$ of length $n$, and exposes the following metrics:
 
--   **Cosine Similarity**
--   **Hamming Similarity**
+-   **Cosine Distance**
+-   **Hamming Distance**
 -   **Manhattan Distance**
 -   **Euclidean Distance**
 
@@ -32,13 +32,15 @@ For each computation, the prover commits to the vectors used in the process. For
 Run the examples via one of the following:
 
 ```sh
-LOOKUP_BITS=12 cargo run --example similarities -- --name similarities --input vec4.in -k 13 mock
+LOOKUP_BITS=12 cargo run --example distances -- --name distances --input vec4.in -k 13 mock
 
 LOOKUP_BITS=12 cargo run --example exhaustive -- --name exhaustive -k 13 mock
 
-LOOKUP_BITS=12 cargo run --example merkle_poseidon -- --name merkle_poseidon -k 13 mock
+LOOKUP_BITS=12 cargo run --example merkle -- --name merkle -k 13 mock
 
-LOOKUP_BITS=12 cargo run --example exhaustive_merkle -- --name exhaustive_merkle --input query1.in -k 13 mock
+LOOKUP_BITS=12 cargo run --example exhaustive_merkle -- --name exhaustive_merkle --input query_small.in -k 13 mock
+
+LOOKUP_BITS=12 cargo run --example kmeans -- --name kmeans -k 13 mock
 ```
 
 You can provide a specific input via the `--input <input-name>` option.
@@ -50,3 +52,8 @@ We plan on testing our implementations over vectors from `ANN_SIFT_10K` by [Jég
 ## Acknowledgements
 
 The project is developed as part of [Axiom Open Source V2](https://www.axiom.xyz/open-source-v2) program.
+
+## TODO
+
+-   LOTS OF REFACTORING NEEDED. I am new to rust so I did lots of cloning to silence some errors.
+-   Many `Vec`s can have constant size known at compile time.

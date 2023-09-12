@@ -8,8 +8,8 @@ use halo2_base::{
     QuantumCell::{Constant, Existing, Witness},
 };
 use halo2_scaffold::gadget::{
+    distance::{DistanceChip, DistanceInstructions},
     fixed_point::FixedPointInstructions,
-    similarity::{SimilarityChip, SimilarityInstructions},
 };
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
@@ -31,7 +31,7 @@ fn kmeans<F: ScalarField>(
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
-    let similarity_chip = SimilarityChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(lookup_bits);
 
     // load k
     const K: usize = 4;
@@ -39,7 +39,7 @@ fn kmeans<F: ScalarField>(
     let vectors: Vec<Vec<AssignedValue<F>>> = input
         .vectors
         .iter()
-        .map(|v| ctx.assign_witnesses(similarity_chip.quantize_vector(&v)))
+        .map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v)))
         .collect();
 
     // choose initial centroids (just first few vectors)
@@ -57,29 +57,27 @@ fn kmeans<F: ScalarField>(
             .iter()
             .map(|v| {
                 // compute distance to centroids
-                let distances: Vec<AssignedValue<F>> = centroids
-                    .iter()
-                    .map(|c| similarity_chip.euclidean_distance(ctx, c, v))
-                    .collect();
+                let distances: Vec<AssignedValue<F>> =
+                    centroids.iter().map(|c| distance_chip.euclidean_distance(ctx, c, v)).collect();
 
                 // find the minimum
                 let min: AssignedValue<F> = distances
                     .clone()
                     .into_iter()
-                    .reduce(|acc, d| similarity_chip.fixed_point_gate().qmin(ctx, acc, d))
+                    .reduce(|acc, d| distance_chip.fixed_point_gate().qmin(ctx, acc, d))
                     .expect("unexpected error");
 
                 // return indicator
                 distances
                     .into_iter()
                     .map(|d| {
-                        let eq = similarity_chip.fixed_point_gate().gate().is_equal(ctx, min, d);
+                        let eq = distance_chip.fixed_point_gate().gate().is_equal(ctx, min, d);
 
                         // quantized ones and zeros
-                        let one = ctx.load_witness(similarity_chip.quantize(1.0));
-                        let zero = ctx.load_witness(similarity_chip.quantize(0.0));
+                        let one = ctx.load_constant(distance_chip.quantize(1.0));
+                        let zero = ctx.load_constant(distance_chip.quantize(0.0));
 
-                        similarity_chip.fixed_point_gate().gate().select(ctx, one, zero, eq)
+                        distance_chip.fixed_point_gate().gate().select(ctx, one, zero, eq)
                     })
                     .collect()
             })
@@ -96,7 +94,7 @@ fn kmeans<F: ScalarField>(
             .reduce(|acc, cluster_indicator| {
                 acc.into_iter()
                     .zip(cluster_indicator)
-                    .map(|(a, c)| similarity_chip.fixed_point_gate().qadd(ctx, a, c))
+                    .map(|(a, c)| distance_chip.fixed_point_gate().qadd(ctx, a, c))
                     .collect()
             })
             .unwrap();
@@ -113,9 +111,8 @@ fn kmeans<F: ScalarField>(
                 .into_iter()
                 .zip(vector_cluster_indicators.clone())
                 .map(|(v, indicator)| {
-                    //
                     v.into_iter()
-                        .map(|v_i| similarity_chip.fixed_point_gate().qmul(ctx, v_i, indicator[ci]))
+                        .map(|v_i| distance_chip.fixed_point_gate().qmul(ctx, v_i, indicator[ci]))
                         .collect()
                 })
                 .collect();
@@ -126,9 +123,7 @@ fn kmeans<F: ScalarField>(
                 .reduce(|acc, v| {
                     v.into_iter()
                         .zip(acc)
-                        .map(|(v_i, acc_i)| {
-                            similarity_chip.fixed_point_gate().qadd(ctx, v_i, acc_i)
-                        })
+                        .map(|(v_i, acc_i)| distance_chip.fixed_point_gate().qadd(ctx, v_i, acc_i))
                         .collect()
                 })
                 .unwrap();
@@ -136,7 +131,7 @@ fn kmeans<F: ScalarField>(
             // mean of the vectors in this cluster, assigned directly to the centroid
             centroids[ci] = sum
                 .into_iter()
-                .map(|v| similarity_chip.fixed_point_gate().qdiv(ctx, v, cluster_sizes[ci]))
+                .map(|v| distance_chip.fixed_point_gate().qdiv(ctx, v, cluster_sizes[ci]))
                 .collect();
         }
     }
