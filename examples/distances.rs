@@ -56,6 +56,10 @@ fn distance_functions<F: ScalarField>(
     let dist_native = distance_chip.dequantize(*dist.value());
     println!("hamming distance: {:?}", dist_native);
     make_public.push(dist);
+
+    // What do quantized fields for zero and one look like?
+    // println!("1.0 = {:?}", distance_chip.quantize(1.0));
+    // println!("0.0 = {:?}", distance_chip.quantize(0.0));
 }
 
 fn main() {

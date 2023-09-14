@@ -11,17 +11,17 @@ We are given a set of embedding vectors. These vectors are typically composed of
 
 After this, we have several vectors in the database along with a query vector. We would like the circuit to find a vector in the database that is similar to our query vector. This task has two aspects:
 
--   The vector similarity algorithms should be verifiable, i.e. we need to implement chips for them.
--   The database should be committed to, ensuring that the verifiable similarity algorithm has been used on all vectors.
+-   The vector similarity algorithms should be verifiable.
+-   The database should be committed to ensure that the verifiable similarity algorithm has been used on all vectors within the commitment.
 
 ### Distance Metrics
 
 We provide a `DistanceChip` that operate on two vectors $a, b$ of length $n$, and exposes the following metrics:
 
--   **Cosine Distance**
--   **Hamming Distance**
--   **Manhattan Distance**
--   **Euclidean Distance**
+-   Cosine Distance
+-   Hamming Distance
+-   Manhattan Distance
+-   Euclidean Distance
 
 ### Committing to a Database
 
@@ -32,14 +32,13 @@ For each computation, the prover commits to the vectors used in the process. For
 Run the examples via one of the following:
 
 ```sh
+# demonstrate distance computations
 LOOKUP_BITS=12 cargo run --example distances -- --name distances --input vec4.in -k 13 mock
 
+# exhaustively find the similar vector & commit to the database
 LOOKUP_BITS=12 cargo run --example exhaustive -- --name exhaustive -k 13 mock
 
-LOOKUP_BITS=12 cargo run --example merkle -- --name merkle -k 13 mock
-
-LOOKUP_BITS=12 cargo run --example exhaustive_merkle -- --name exhaustive_merkle --input query_small.in -k 13 mock
-
+# compute centroids
 LOOKUP_BITS=12 cargo run --example kmeans -- --name kmeans -k 13 mock
 ```
 
