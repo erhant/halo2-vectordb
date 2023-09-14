@@ -33,8 +33,9 @@ fn kmeans<F: ScalarField>(
     const PRECISION_BITS: u32 = 32;
     let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(lookup_bits);
 
-    // load k
-    const K: usize = 4;
+    // quantized ones and zeros
+    let one = ctx.load_constant(distance_chip.quantize(1.0));
+    let zero = ctx.load_constant(distance_chip.quantize(0.0));
 
     let vectors: Vec<Vec<AssignedValue<F>>> = input
         .vectors
@@ -42,11 +43,18 @@ fn kmeans<F: ScalarField>(
         .map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v)))
         .collect();
 
+    const K: usize = 2; // TODO: take as param
+
     // choose initial centroids (just first few vectors)
-    let mut centroids: Vec<Vec<AssignedValue<F>>> = vectors.clone().into_iter().take(K).collect();
+    let mut centroids = Vec::with_capacity(K);
+    for i in 0..K {
+        centroids.push(vectors[i].clone());
+    }
+
+    println!("K-Means with K = {:?}", centroids.len());
 
     // k-means with fixed number of iteraitons
-    const NUM_ITERS: usize = 10;
+    const NUM_ITERS: usize = 2;
     for _ in 0..NUM_ITERS {
         // compute distances between each data point and the set of centroids
         // assign each data point to the closest centroid
@@ -65,21 +73,19 @@ fn kmeans<F: ScalarField>(
                     .clone()
                     .into_iter()
                     .reduce(|acc, d| distance_chip.fixed_point_gate().qmin(ctx, acc, d))
-                    .expect("unexpected error");
+                    .unwrap();
 
                 // return indicator
-                distances
+                let indicators: Vec<AssignedValue<F>> = distances
                     .into_iter()
                     .map(|d| {
                         let eq = distance_chip.fixed_point_gate().gate().is_equal(ctx, min, d);
 
-                        // quantized ones and zeros
-                        let one = ctx.load_constant(distance_chip.quantize(1.0));
-                        let zero = ctx.load_constant(distance_chip.quantize(0.0));
-
                         distance_chip.fixed_point_gate().gate().select(ctx, one, zero, eq)
                     })
-                    .collect()
+                    .collect();
+
+                indicators
             })
             .collect();
 
@@ -109,7 +115,8 @@ fn kmeans<F: ScalarField>(
             let filtered_vectors: Vec<Vec<AssignedValue<F>>> = vectors
                 .clone()
                 .into_iter()
-                .zip(vector_cluster_indicators.clone())
+                .zip(&vector_cluster_indicators)
+                // multiply each element of the vector by the current cluster indicator
                 .map(|(v, indicator)| {
                     v.into_iter()
                         .map(|v_i| distance_chip.fixed_point_gate().qmul(ctx, v_i, indicator[ci]))
@@ -120,18 +127,20 @@ fn kmeans<F: ScalarField>(
             // sum of vectors in this cluster
             let sum: Vec<AssignedValue<F>> = filtered_vectors
                 .into_iter()
-                .reduce(|acc, v| {
-                    v.into_iter()
+                .reduce(|acc, vector| {
+                    vector
+                        .into_iter()
                         .zip(acc)
-                        .map(|(v_i, acc_i)| distance_chip.fixed_point_gate().qadd(ctx, v_i, acc_i))
+                        .map(|(v, a)| distance_chip.fixed_point_gate().qadd(ctx, v, a))
                         .collect()
                 })
                 .unwrap();
 
             // mean of the vectors in this cluster, assigned directly to the centroid
+            // simply divide each element in the vector by the number of vectors in the cluster
             centroids[ci] = sum
                 .into_iter()
-                .map(|v| distance_chip.fixed_point_gate().qdiv(ctx, v, cluster_sizes[ci]))
+                .map(|s| distance_chip.fixed_point_gate().qdiv(ctx, s, cluster_sizes[ci]))
                 .collect();
         }
     }
