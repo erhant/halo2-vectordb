@@ -9,7 +9,7 @@ use halo2_base::{
 };
 use halo2_scaffold::gadget::{
     distance::{DistanceChip, DistanceInstructions},
-    fixed_point::FixedPointInstructions,
+    fixed_point::{FixedPointChip, FixedPointInstructions},
 };
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
@@ -31,7 +31,8 @@ fn kmeans<F: ScalarField>(
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let distance_chip = DistanceChip::default(fixed_point_chip);
 
     // quantized ones and zeros
     let one = ctx.load_constant(distance_chip.quantize(1.0));

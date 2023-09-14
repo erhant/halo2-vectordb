@@ -1,7 +1,10 @@
 use clap::Parser;
 use halo2_base::{utils::ScalarField, AssignedValue, Context};
 use halo2_scaffold::{
-    gadget::distance::{DistanceChip, DistanceInstructions},
+    gadget::{
+        fixed_point::FixedPointChip,
+        vectordb::{VectorDBChip, VectorDBInstructions},
+    },
     scaffold::{cmd::Cli, run},
 };
 use poseidon::PoseidonChip;
@@ -28,16 +31,17 @@ fn merkle_poseidon<F: ScalarField>(
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let vectordb_chip = VectorDBChip::default(fixed_point_chip);
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let database: Vec<Vec<AssignedValue<F>>> = input
         .database
         .iter()
-        .map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v)))
+        .map(|v| ctx.assign_witnesses(vectordb_chip.quantize_vector(&v)))
         .collect();
 
-    let root = distance_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);
+    let root = vectordb_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);
 
     make_public.push(root);
     println!("Merkle root: {:?}", root.value());

@@ -5,7 +5,10 @@ extern crate assert_float_eq;
 use assert_float_eq::afe_is_relative_eq;
 use halo2_base::{gates::builder::GateThreadBuilder, utils::ScalarField, AssignedValue};
 use halo2_proofs::halo2curves::bn256::Fr;
-use halo2_scaffold::gadget::distance::{DistanceChip, DistanceInstructions};
+use halo2_scaffold::gadget::{
+    distance::{DistanceChip, DistanceInstructions},
+    fixed_point::FixedPointChip,
+};
 
 const LOOKUP_BITS: usize = 13;
 const PRECISION_BITS: u32 = 48;
@@ -13,7 +16,8 @@ const PRECISION_BITS: u32 = 48;
 fn chip_euclidean<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let distance_chip = DistanceChip::default(fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
@@ -34,7 +38,8 @@ fn test_euclidean_distance() {
 fn chip_manhattan<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let distance_chip = DistanceChip::default(fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
@@ -55,7 +60,8 @@ fn test_manhattan_distance() {
 fn chip_cosine<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let distance_chip = DistanceChip::default(fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
@@ -76,7 +82,8 @@ fn test_cosine_distance() {
 fn chip_hamming<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let distance_chip = DistanceChip::default(fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));

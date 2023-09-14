@@ -6,7 +6,11 @@ use halo2_base::{
     Context,
     QuantumCell::{Constant, Existing, Witness},
 };
-use halo2_scaffold::gadget::distance::{DistanceChip, DistanceInstructions};
+use halo2_scaffold::gadget::{
+    distance::{DistanceChip, DistanceInstructions},
+    fixed_point::FixedPointChip,
+    vectordb::{VectorDBChip, VectorDBInstructions},
+};
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
 use poseidon::PoseidonChip;
@@ -34,7 +38,9 @@ fn exhaustive_merkle<F: ScalarField>(
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
+    let vectordb_chip = VectorDBChip::default(fixed_point_chip);
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let query: Vec<AssignedValue<F>> =
@@ -45,7 +51,9 @@ fn exhaustive_merkle<F: ScalarField>(
         .map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v)))
         .collect();
 
-    let result = distance_chip.nearest_vector(ctx, &query, &database);
+    let result = vectordb_chip.nearest_vector(ctx, &query, &database, &|ctx, a, b| {
+        distance_chip.euclidean_distance(ctx, a, b)
+    });
     make_public.extend(result.iter());
 
     println!("Result:");
@@ -55,7 +63,7 @@ fn exhaustive_merkle<F: ScalarField>(
     println!("");
 
     // compute commitment to the database
-    let root = distance_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);
+    let root = vectordb_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);
     make_public.push(root);
     println!("Merkle Root: {:?}", root.value());
 }

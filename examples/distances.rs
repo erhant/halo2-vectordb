@@ -6,7 +6,10 @@ use halo2_base::{
     Context,
     QuantumCell::{Constant, Existing, Witness},
 };
-use halo2_scaffold::gadget::distance::{DistanceChip, DistanceInstructions};
+use halo2_scaffold::gadget::{
+    distance::{DistanceChip, DistanceInstructions},
+    fixed_point::FixedPointChip,
+};
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
 use serde::{Deserialize, Serialize};
@@ -28,7 +31,8 @@ fn distance_functions<F: ScalarField>(
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
-    let distance_chip = DistanceChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
+    let distance_chip = DistanceChip::default(fixed_point_chip);
 
     let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(&input.a));
     let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(&input.b));
