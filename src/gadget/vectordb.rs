@@ -98,7 +98,7 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
             &Vec<AssignedValue<F>>,
             &Vec<AssignedValue<F>>,
         ) -> AssignedValue<F>,
-    ) -> (Vec<Vec<AssignedValue<F>>>, Vec<Vec<AssignedValue<F>>>)
+    ) -> ([Vec<AssignedValue<F>>; K], Vec<[AssignedValue<F>; K]>)
     where
         F: ScalarField;
 }
@@ -209,19 +209,21 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
             &Vec<AssignedValue<F>>,
             &Vec<AssignedValue<F>>,
         ) -> AssignedValue<F>,
-    ) -> (Vec<Vec<AssignedValue<F>>>, Vec<Vec<AssignedValue<F>>>)
+    ) -> ([Vec<AssignedValue<F>>; K], Vec<[AssignedValue<F>; K]>)
     where
         F: ScalarField,
     {
         // choose initial centroids as the first `k` vectors
-        let mut centroids: Vec<Vec<AssignedValue<F>>> =
-            (0..K).map(|i| vectors[i].clone()).collect();
+        let mut centroids: [Vec<AssignedValue<F>>; K] = [0; K].map(|_| vec![]);
+        for i in 0..K {
+            centroids[i] = vectors[i].clone();
+        }
 
         // ones and zeros needed for indicators
         let one: AssignedValue<F> = ctx.load_constant(self.quantize(1.0));
         let zero: AssignedValue<F> = ctx.load_zero(); // quantized zero is equal to native zero
 
-        let mut cluster_indicators: Vec<Vec<AssignedValue<F>>> = vec![];
+        let mut cluster_indicators: Vec<[AssignedValue<F>; K]> = vec![];
 
         for _iter in 0..I {
             // assign each vector to closest centroid
@@ -235,8 +237,8 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
                 .iter()
                 .map(|v| {
                     // compute distance to centroids
-                    let distances: Vec<AssignedValue<F>> =
-                        centroids.iter().map(|c| distance(ctx, c, v)).collect();
+                    let distances: [AssignedValue<F>; K] =
+                        centroids.clone().map(|c| distance(ctx, &c, v));
 
                     // find the minimum
                     let min: AssignedValue<F> = distances
@@ -246,16 +248,13 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
                         .unwrap();
 
                     // return indicator
-                    let indicators: Vec<AssignedValue<F>> = distances
-                        .into_iter()
-                        .map(|d| {
-                            // check if distance is the minimum
-                            let eq = self.fixed_point_gate().gate().is_equal(ctx, min, d);
+                    let indicators: [AssignedValue<F>; K] = distances.map(|d| {
+                        // check if distance is the minimum
+                        let eq = self.fixed_point_gate().gate().is_equal(ctx, min, d);
 
-                            // return 1 if so, 0 otherwise
-                            self.fixed_point_gate().gate().select(ctx, one, zero, eq)
-                        })
-                        .collect();
+                        // return 1 if so, 0 otherwise
+                        self.fixed_point_gate().gate().select(ctx, one, zero, eq)
+                    });
 
                     indicators
                 })
@@ -264,16 +263,15 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
             // index-wise summation of indicators will give the cluster sizes
             // this will be used to take the mean value after computing sum of
             // vectors within the cluster
-            let cluster_sizes: Vec<AssignedValue<F>> = cluster_indicators
+
+            let cluster_sizes: [AssignedValue<F>; K] = cluster_indicators
                 .clone()
                 .into_iter()
                 .reduce(|sizes, indicators| {
                     // element-wise addition
                     sizes
-                        .into_iter()
                         .zip(indicators)
-                        .map(|(a, c)| self.fixed_point_gate().qadd(ctx, a, c))
-                        .collect()
+                        .map(|(size, ind)| self.fixed_point_gate().qadd(ctx, size, ind))
                 })
                 .unwrap();
 
@@ -302,6 +300,8 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
                         // we will add these values later, and that is alright because `v` is
                         // already quantized, and a field 0 is equal to a quantized 0
                         // (note that a quantized 1 is not a field 1)
+
+                        // TODO: possible bug
                         let is_zero = self.fixed_point_gate().gate().is_zero(ctx, sel);
                         vector
                             .into_iter()
