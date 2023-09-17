@@ -1,5 +1,4 @@
 use clap::Parser;
-use halo2_base::gates::GateInstructions;
 use halo2_base::utils::ScalarField;
 use halo2_base::AssignedValue;
 #[allow(unused_imports)]
@@ -9,7 +8,7 @@ use halo2_base::{
 };
 use halo2_scaffold::gadget::{
     distance::{DistanceChip, DistanceInstructions},
-    fixed_point::{FixedPointChip, FixedPointInstructions},
+    fixed_point::FixedPointChip,
     vectordb::{VectorDBChip, VectorDBInstructions},
 };
 use halo2_scaffold::scaffold::cmd::Cli;

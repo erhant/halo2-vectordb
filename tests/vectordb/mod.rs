@@ -9,11 +9,9 @@ pub fn kmeans<const K: usize, const I: usize>(
     // dimensions of each vector
     let n = vectors[0].len();
 
-    // we take the first `k` vectors as the initial centroid
-    let mut centroids: [Vec<f64>; K] = [0; K].map(|_| vec![]);
-    for i in 0..K {
-        centroids[i] = vectors[i].clone();
-    }
+    // take first K vectors as the initial centroids
+    let mut centroids: [Vec<f64>; K] =
+        vectors.iter().take(K).cloned().collect::<Vec<Vec<f64>>>().try_into().unwrap();
 
     // number of vectors within each cluster
     let mut cluster_sizes: [usize; K] = [0; K];

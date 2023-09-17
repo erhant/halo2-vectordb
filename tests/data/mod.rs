@@ -3,7 +3,7 @@ use std::fs::read;
 use std::io::Cursor;
 
 // TODO handle errors
-fn fetch_vectors(path: &str, dims: usize) -> Vec<f32> {
+pub fn fetch_vectors(path: &str, dims: usize) -> Vec<f32> {
     let data_r = read(path).unwrap();
     let data_r_slice = data_r.as_slice();
 
@@ -26,7 +26,7 @@ fn fetch_vectors(path: &str, dims: usize) -> Vec<f32> {
     data_w
 }
 
-fn main() {
-    let vecs = fetch_vectors("./res/siftsmall_query.fvecs", 128);
-    println!("{:?}", vecs.len());
-}
+// fn main() {
+//     let vecs = fetch_vectors("./res/siftsmall_query.fvecs", 128);
+//     println!("{:?}", vecs.len());
+// }

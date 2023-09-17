@@ -1,8 +1,4 @@
-use halo2_base::{
-    gates::{GateInstructions, RangeInstructions},
-    utils::ScalarField,
-    AssignedValue, Context, QuantumCell,
-};
+use halo2_base::{gates::GateInstructions, utils::ScalarField, AssignedValue, Context};
 use poseidon::PoseidonChip;
 use std::fmt::Debug;
 
@@ -213,11 +209,14 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
     where
         F: ScalarField,
     {
-        // choose initial centroids as the first `k` vectors
-        let mut centroids: [Vec<AssignedValue<F>>; K] = [0; K].map(|_| vec![]);
-        for i in 0..K {
-            centroids[i] = vectors[i].clone();
-        }
+        // take first K vectors as the initial centroids
+        let mut centroids: [Vec<AssignedValue<F>>; K] = vectors
+            .iter()
+            .take(K)
+            .cloned()
+            .collect::<Vec<Vec<AssignedValue<F>>>>()
+            .try_into()
+            .unwrap();
 
         // ones and zeros needed for indicators
         let one: AssignedValue<F> = ctx.load_constant(self.quantize(1.0));
@@ -301,7 +300,6 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
                         // already quantized, and a field 0 is equal to a quantized 0
                         // (note that a quantized 1 is not a field 1)
 
-                        // TODO: possible bug
                         let is_zero = self.fixed_point_gate().gate().is_zero(ctx, sel);
                         vector
                             .into_iter()
