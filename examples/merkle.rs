@@ -18,7 +18,7 @@ const R_P: usize = 57;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput {
-    pub database: Vec<Vec<f64>>,
+    pub vectors: Vec<Vec<f64>>,
 }
 
 fn merkle_poseidon<F: ScalarField>(
@@ -26,7 +26,7 @@ fn merkle_poseidon<F: ScalarField>(
     input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
-    assert!(input.database.iter().all(|vec| vec.len() == input.database[0].len()));
+    assert!(input.vectors.iter().all(|vec| vec.len() == input.vectors[0].len()));
 
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
@@ -36,7 +36,7 @@ fn merkle_poseidon<F: ScalarField>(
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let database: Vec<Vec<AssignedValue<F>>> = input
-        .database
+        .vectors
         .iter()
         .map(|v| ctx.assign_witnesses(vectordb_chip.quantize_vector(&v)))
         .collect();

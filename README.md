@@ -35,6 +35,9 @@ Run the examples via one of the following:
 # demonstrate distance computations
 LOOKUP_BITS=12 cargo run --example distances -- --name distances --input vec4.in -k 13 mock
 
+# example merkle commitment to vectors
+LOOKUP_BITS=12 cargo run --example merkle -- --name merkle -k 13 mock
+
 # exhaustively find the similar vector & commit to the database
 LOOKUP_BITS=12 cargo run --example exhaustive -- --name exhaustive -k 13 mock
 
@@ -51,8 +54,3 @@ We plan on testing our implementations over vectors from `ANN_SIFT_10K` by [Jég
 ## Acknowledgements
 
 The project is developed as part of [Axiom Open Source V2](https://www.axiom.xyz/open-source-v2) program.
-
-## TODO
-
--   LOTS OF REFACTORING NEEDED. I am new to rust so I did lots of cloning to silence some errors.
--   Many `Vec`s can have constant size known at compile time.

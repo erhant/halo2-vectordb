@@ -176,9 +176,27 @@ impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISIO
             })
             .collect();
 
-        // construct merklee tree from the hashes
-        // TODO: make this extend with zeros for powers of two
+        // extend leaves with zeros to ensure number of leaves is a power of two
+        let num_hashes = hashes.len();
+        let num_leaves: usize = if (num_hashes & (num_hashes - 1)) == 0 {
+            num_hashes
+        } else {
+            let mut p = 1 as usize;
+            while p < num_hashes {
+                p <<= 1;
+            }
+            p
+        };
+        assert!(num_hashes <= num_leaves, "expected #hashes to be less than computed #leaves");
+        let num_zeros = num_leaves - num_hashes;
+
+        // construct merklee tree from the hashes & zeros
+
         let mut leaves: Vec<AssignedValue<F>> = hashes;
+        if num_zeros > 0 {
+            leaves.extend(vec![ctx.load_zero(); num_zeros])
+        }
+        assert_eq!(leaves.len(), num_leaves, "expected #leaves many leaves");
 
         while leaves.len() > 1 {
             // assert that the number of leaves is a power of two
