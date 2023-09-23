@@ -33,7 +33,7 @@ fn merkle_poseidon<F: ScalarField>(
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
-    let vectordb_chip = VectorDBChip::default(fixed_point_chip.clone());
+    let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let database: Vec<Vec<AssignedValue<F>>> = input

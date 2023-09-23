@@ -13,20 +13,20 @@ pub enum DistanceStrategy {
 }
 
 #[derive(Clone, Debug)]
-pub struct DistanceChip<F: ScalarField, const PRECISION_BITS: u32> {
+pub struct DistanceChip<'a, F: ScalarField, const PRECISION_BITS: u32> {
     strategy: DistanceStrategy,
-    pub fixed_point_gate: FixedPointChip<F, PRECISION_BITS>,
+    fixed_point_gate: &'a FixedPointChip<F, PRECISION_BITS>,
 }
 
-impl<F: ScalarField, const PRECISION_BITS: u32> DistanceChip<F, PRECISION_BITS> {
+impl<'a, F: ScalarField, const PRECISION_BITS: u32> DistanceChip<'a, F, PRECISION_BITS> {
     pub fn new(
         strategy: DistanceStrategy,
-        fixed_point_gate: FixedPointChip<F, PRECISION_BITS>,
+        fixed_point_gate: &'a FixedPointChip<F, PRECISION_BITS>,
     ) -> Self {
         Self { strategy, fixed_point_gate }
     }
 
-    pub fn default(fixed_point_gate: FixedPointChip<F, PRECISION_BITS>) -> Self {
+    pub fn default(fixed_point_gate: &'a FixedPointChip<F, PRECISION_BITS>) -> Self {
         Self::new(DistanceStrategy::Vertical, fixed_point_gate)
     }
 }
@@ -81,8 +81,8 @@ pub trait DistanceInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         F: ScalarField;
 }
 
-impl<F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PRECISION_BITS>
-    for DistanceChip<F, PRECISION_BITS>
+impl<'a, F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PRECISION_BITS>
+    for DistanceChip<'a, F, PRECISION_BITS>
 {
     type FixedPointGate = FixedPointChip<F, PRECISION_BITS>;
 

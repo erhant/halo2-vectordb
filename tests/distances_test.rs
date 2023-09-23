@@ -18,7 +18,7 @@ fn chip_euclidean<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
+    let distance_chip = DistanceChip::default(&fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
@@ -40,7 +40,7 @@ fn chip_manhattan<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
+    let distance_chip = DistanceChip::default(&fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
@@ -62,7 +62,7 @@ fn chip_cosine<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
+    let distance_chip = DistanceChip::default(&fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
@@ -84,7 +84,7 @@ fn chip_hamming<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
+    let distance_chip = DistanceChip::default(&fixed_point_chip);
 
     let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
     let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));

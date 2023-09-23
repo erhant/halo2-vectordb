@@ -10,20 +10,20 @@ pub enum VectorDBStrategy {
 }
 
 #[derive(Clone, Debug)]
-pub struct VectorDBChip<F: ScalarField, const PRECISION_BITS: u32> {
+pub struct VectorDBChip<'a, F: ScalarField, const PRECISION_BITS: u32> {
     strategy: VectorDBStrategy,
-    pub fixed_point_gate: FixedPointChip<F, PRECISION_BITS>,
+    pub fixed_point_gate: &'a FixedPointChip<F, PRECISION_BITS>,
 }
 
-impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBChip<F, PRECISION_BITS> {
+impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBChip<'a, F, PRECISION_BITS> {
     pub fn new(
         strategy: VectorDBStrategy,
-        fixed_point_gate: FixedPointChip<F, PRECISION_BITS>,
+        fixed_point_gate: &'a FixedPointChip<F, PRECISION_BITS>,
     ) -> Self {
         Self { strategy, fixed_point_gate }
     }
 
-    pub fn default(fixed_point_gate: FixedPointChip<F, PRECISION_BITS>) -> Self {
+    pub fn default(fixed_point_gate: &'a FixedPointChip<F, PRECISION_BITS>) -> Self {
         Self::new(VectorDBStrategy::Vertical, fixed_point_gate)
     }
 }
@@ -84,8 +84,8 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
         F: ScalarField;
 }
 
-impl<F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISION_BITS>
-    for VectorDBChip<F, PRECISION_BITS>
+impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISION_BITS>
+    for VectorDBChip<'a, F, PRECISION_BITS>
 {
     type FixedPointGate = FixedPointChip<F, PRECISION_BITS>;
 

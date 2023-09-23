@@ -24,8 +24,8 @@ fn chip_kmeans<F: ScalarField, const K: usize, const I: usize>(
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
-    let vectordb_chip = VectorDBChip::default(fixed_point_chip.clone());
+    let distance_chip = DistanceChip::default(&fixed_point_chip);
+    let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
 
     // quantize
     let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
