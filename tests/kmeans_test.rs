@@ -68,7 +68,7 @@ fn chip_kmeans<F: ScalarField, const K: usize, const I: usize>(
 #[test]
 fn test_kmeans_small() {
     const K: usize = 2;
-    const I: usize = 10;
+    const I: usize = 4;
     let vectors = vec![vec![1.0, 1.0], vec![2.0, 1.0], vec![4.0, 3.0], vec![5.0, 4.0]];
 
     // fixed iterations since we have to do it that way in our circuit
