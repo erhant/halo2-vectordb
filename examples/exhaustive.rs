@@ -9,6 +9,7 @@ use halo2_base::{
 use halo2_scaffold::gadget::{
     distance::{DistanceChip, DistanceInstructions},
     fixed_point::FixedPointChip,
+    fixed_point_vec::FixedPointVectorInstructions,
     vectordb::{VectorDBChip, VectorDBInstructions},
 };
 use halo2_scaffold::scaffold::cmd::Cli;
@@ -40,15 +41,15 @@ fn exhaustive_merkle<F: ScalarField>(
     const PRECISION_BITS: u32 = 32;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
     let distance_chip = DistanceChip::default(fixed_point_chip.clone());
-    let vectordb_chip = VectorDBChip::default(fixed_point_chip);
+    let vectordb_chip = VectorDBChip::default(fixed_point_chip.clone());
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let query: Vec<AssignedValue<F>> =
-        ctx.assign_witnesses(distance_chip.quantize_vector(&input.query));
+        ctx.assign_witnesses(fixed_point_chip.quantize_vector(&input.query));
     let database: Vec<Vec<AssignedValue<F>>> = input
         .database
         .iter()
-        .map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v)))
+        .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
     let result = vectordb_chip.nearest_vector(ctx, &query, &database, &|ctx, a, b| {
@@ -58,7 +59,8 @@ fn exhaustive_merkle<F: ScalarField>(
 
     println!("Result:");
     for e in result {
-        print!("{:?} ", distance_chip.dequantize(*e.value()));
+        let val = fixed_point_chip.dequantization(*e.value());
+        print!("{:?} ", val);
     }
     println!("");
 

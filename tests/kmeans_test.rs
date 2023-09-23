@@ -1,5 +1,6 @@
 use halo2_scaffold::gadget::{
     fixed_point::FixedPointChip,
+    fixed_point_vec::FixedPointVectorInstructions,
     vectordb::{VectorDBChip, VectorDBInstructions},
 };
 
@@ -24,11 +25,13 @@ fn chip_kmeans<F: ScalarField, const K: usize, const I: usize>(
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
     let distance_chip = DistanceChip::default(fixed_point_chip.clone());
-    let vectordb_chip = VectorDBChip::default(fixed_point_chip);
+    let vectordb_chip = VectorDBChip::default(fixed_point_chip.clone());
 
     // quantize
-    let qvectors: Vec<Vec<AssignedValue<F>>> =
-        vectors.iter().map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v))).collect();
+    let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
+        .iter()
+        .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
+        .collect();
 
     let (centroids, cluster_indicators) =
         vectordb_chip.kmeans::<K, I>(ctx, &qvectors, &|ctx, a, b| {
@@ -37,13 +40,13 @@ fn chip_kmeans<F: ScalarField, const K: usize, const I: usize>(
 
     // dequantize centroid values
     let centroids_native: [Vec<f64>; K] = centroids.map(|centroid| {
-        centroid.into_iter().map(|c| distance_chip.dequantize(*c.value())).collect()
+        centroid.into_iter().map(|c| fixed_point_chip.dequantization(*c.value())).collect()
     });
 
     // a vector of 1.0s and 0.0s for each vector
     let cluster_indicators_native: Vec<[f64; K]> = cluster_indicators
         .into_iter()
-        .map(|centroid| centroid.map(|c| distance_chip.dequantize(*c.value())))
+        .map(|centroid| centroid.map(|c| fixed_point_chip.dequantization(*c.value())))
         .collect();
 
     let cluster_ids: Vec<usize> = cluster_indicators_native

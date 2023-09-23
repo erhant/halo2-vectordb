@@ -8,6 +8,7 @@ use halo2_proofs::halo2curves::bn256::Fr;
 use halo2_scaffold::gadget::{
     distance::{DistanceChip, DistanceInstructions},
     fixed_point::FixedPointChip,
+    fixed_point_vec::FixedPointVectorInstructions,
 };
 
 const LOOKUP_BITS: usize = 13;
@@ -17,12 +18,12 @@ fn chip_euclidean<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip);
+    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
 
-    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
-    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
+    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
+    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
     let dist: AssignedValue<F> = distance_chip.euclidean_distance(ctx, &qa, &qb);
-    distance_chip.dequantize(*dist.value())
+    fixed_point_chip.dequantization(*dist.value())
 }
 
 #[test]
@@ -39,12 +40,12 @@ fn chip_manhattan<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip);
+    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
 
-    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
-    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
+    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
+    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
     let dist: AssignedValue<F> = distance_chip.manhattan_distance(ctx, &qa, &qb);
-    distance_chip.dequantize(*dist.value())
+    fixed_point_chip.dequantization(*dist.value())
 }
 
 #[test]
@@ -61,12 +62,12 @@ fn chip_cosine<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip);
+    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
 
-    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
-    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
+    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
+    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
     let dist: AssignedValue<F> = distance_chip.cosine_distance(ctx, &qa, &qb);
-    distance_chip.dequantize(*dist.value())
+    fixed_point_chip.dequantization(*dist.value())
 }
 
 #[test]
@@ -83,12 +84,12 @@ fn chip_hamming<F: ScalarField>(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
-    let distance_chip = DistanceChip::default(fixed_point_chip);
+    let distance_chip = DistanceChip::default(fixed_point_chip.clone());
 
-    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(a));
-    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(distance_chip.quantize_vector(b));
+    let qa: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(a));
+    let qb: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(b));
     let dist: AssignedValue<F> = distance_chip.hamming_distance(ctx, &qa, &qb);
-    distance_chip.dequantize(*dist.value())
+    fixed_point_chip.dequantization(*dist.value())
 }
 #[test]
 fn test_hamming_distance() {

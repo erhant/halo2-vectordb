@@ -29,21 +29,6 @@ impl<F: ScalarField, const PRECISION_BITS: u32> DistanceChip<F, PRECISION_BITS> 
     pub fn default(fixed_point_gate: FixedPointChip<F, PRECISION_BITS>) -> Self {
         Self::new(DistanceStrategy::Vertical, fixed_point_gate)
     }
-
-    /// Wrapper for `quantization` of the fixed-point chip.
-    pub fn quantize(&self, x: f64) -> F {
-        self.fixed_point_gate.quantization(x)
-    }
-
-    /// Wrapper for `dequantization` of the fixed-point chip.
-    pub fn dequantize(&self, x: F) -> f64 {
-        self.fixed_point_gate.dequantization(x)
-    }
-
-    /// Calls `quantize` on a vector of elements.
-    pub fn quantize_vector(&self, a: &Vec<f64>) -> Vec<F> {
-        a.iter().map(|a_i| self.fixed_point_gate.quantization(*a_i)).collect()
-    }
 }
 
 pub trait DistanceInstructions<F: ScalarField, const PRECISION_BITS: u32> {
@@ -151,7 +136,7 @@ impl<F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PRECISIO
         let denom = self.fixed_point_gate.qmul(ctx, aa_sqrt, bb_sqrt);
         let sim = self.fixed_point_gate.qdiv(ctx, ab, denom);
 
-        let one = ctx.load_constant(self.quantize(1.0));
+        let one = ctx.load_constant(self.fixed_point_gate().quantization(1.0));
         self.fixed_point_gate.qsub(ctx, one, sim)
     }
 
@@ -182,7 +167,7 @@ impl<F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PRECISIO
 
         let sim = self.fixed_point_gate.qdiv(ctx, ab_sum_q, len);
 
-        let one = ctx.load_constant(self.quantize(1.0));
+        let one = ctx.load_constant(self.fixed_point_gate().quantization(1.0));
         self.fixed_point_gate.qsub(ctx, one, sim)
     }
 

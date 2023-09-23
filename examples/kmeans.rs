@@ -9,6 +9,7 @@ use halo2_base::{
 use halo2_scaffold::gadget::{
     distance::{DistanceChip, DistanceInstructions},
     fixed_point::FixedPointChip,
+    fixed_point_vec::FixedPointVectorInstructions,
     vectordb::{VectorDBChip, VectorDBInstructions},
 };
 use halo2_scaffold::scaffold::cmd::Cli;
@@ -33,12 +34,12 @@ fn kmeans<F: ScalarField>(
     const PRECISION_BITS: u32 = 32;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
     let distance_chip = DistanceChip::default(fixed_point_chip.clone());
-    let vectordb_chip = VectorDBChip::default(fixed_point_chip);
+    let vectordb_chip = VectorDBChip::default(fixed_point_chip.clone());
 
     let vectors: Vec<Vec<AssignedValue<F>>> = input
         .vectors
         .iter()
-        .map(|v| ctx.assign_witnesses(distance_chip.quantize_vector(&v)))
+        .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
     let (centroids, _) = vectordb_chip

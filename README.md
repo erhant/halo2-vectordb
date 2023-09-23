@@ -25,7 +25,9 @@ We provide a `DistanceChip` that operate on two vectors $a, b$ of length $n$, an
 
 ### Committing to a Database
 
-For each computation, the prover commits to the vectors used in the process. For example, an exhaustive search over the entire database results in a vector that is most similar to the query, along with a Merkle root over the entire database, where the leave nodes are Poseidon hashes of the quantized vectors.
+For each computation, the prover commits to the vectors used in the process. For example, an exhaustive search over the entire database results in a vector that is most similar to the query, along with a Merkle root over the entire database, where the leave nodes are Poseidon hashes of the quantized vectors, zero-padded if necessary so that the number of leaves is a power of two.
+
+### Verifiable K-Means
 
 ## Usage
 

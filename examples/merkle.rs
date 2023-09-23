@@ -3,6 +3,7 @@ use halo2_base::{utils::ScalarField, AssignedValue, Context};
 use halo2_scaffold::{
     gadget::{
         fixed_point::FixedPointChip,
+        fixed_point_vec::FixedPointVectorInstructions,
         vectordb::{VectorDBChip, VectorDBInstructions},
     },
     scaffold::{cmd::Cli, run},
@@ -32,13 +33,13 @@ fn merkle_poseidon<F: ScalarField>(
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 32;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
-    let vectordb_chip = VectorDBChip::default(fixed_point_chip);
+    let vectordb_chip = VectorDBChip::default(fixed_point_chip.clone());
     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let database: Vec<Vec<AssignedValue<F>>> = input
         .vectors
         .iter()
-        .map(|v| ctx.assign_witnesses(vectordb_chip.quantize_vector(&v)))
+        .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
     let root = vectordb_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);
