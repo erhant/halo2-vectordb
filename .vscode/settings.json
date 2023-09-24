@@ -1,6 +1,15 @@
 {
-    "editor.inlayHints.enabled": "offUnlessPressed",
-    "files.associations": {
-        "*.in": "json"
-    }
+  "files.associations": {
+    "*.in": "json"
+  },
+  // how does anyone even work with these on by default
+  "editor.inlayHints.enabled": "offUnlessPressed",
+  // https://raw.githubusercontent.com/PKief/vscode-material-icon-theme/main/images/folderIcons.png
+  "material-icon-theme.folders.associations": {
+    "circuits": "Layout",
+    "gadget": "App",
+    "scaffold": "Template",
+    "distances": "Pipe",
+    "vectordb": "Database"
+  }
 }
