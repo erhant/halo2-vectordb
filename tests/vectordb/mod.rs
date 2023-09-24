@@ -14,6 +14,9 @@ use halo2_scaffold::gadget::{
 ///
 /// Given a vectors, it will try to produce `k` clusters, returning the list of centroids
 /// and the cluster ids of each vector in the given order.
+///
+/// It will do fixed-iterations instead of checking for convergence, as we will compare the
+/// results to a circuit implementation which is fixed-iteration.
 pub fn kmeans<const K: usize, const I: usize>(
     vectors: &Vec<Vec<f64>>,
     distance: &dyn Fn(&Vec<f64>, &Vec<f64>) -> f64,

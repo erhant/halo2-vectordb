@@ -38,7 +38,6 @@ fn kmeans<F: ScalarField>(
     let distance_chip = DistanceChip::default(&fixed_point_chip);
     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
 
-    println!("{:?}", input.vectors);
     let vectors: Vec<Vec<AssignedValue<F>>> = input
         .vectors
         .iter()
@@ -55,9 +54,8 @@ fn kmeans<F: ScalarField>(
     //     })
     // });
 
-    let centroids_native: [Vec<f64>; K] = centroids.map(|centroid| {
-        centroid.into_iter().map(|c| fixed_point_chip.dequantization(*c.value())).collect()
-    });
+    let centroids_native: [Vec<f64>; K] =
+        centroids.map(|centroid| fixed_point_chip.dequantize_vector(&centroid));
     println!("{:?}", centroids_native);
 }
 

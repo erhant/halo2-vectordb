@@ -166,17 +166,16 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
         let num_leaves: usize = if (num_hashes & (num_hashes - 1)) == 0 {
             num_hashes
         } else {
-            let mut p = 1 as usize;
-            while p < num_hashes {
-                p <<= 1;
+            let mut next_pow_of_two = 1 as usize;
+            while next_pow_of_two < num_hashes {
+                next_pow_of_two <<= 1;
             }
-            p
+            next_pow_of_two
         };
         assert!(num_hashes <= num_leaves, "expected #hashes to be less than computed #leaves");
         let num_zeros = num_leaves - num_hashes;
 
         // construct merklee tree from the hashes & zeros
-
         let mut leaves: Vec<AssignedValue<F>> = hashes;
         if num_zeros > 0 {
             leaves.extend(vec![ctx.load_zero(); num_zeros])
@@ -184,7 +183,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
         assert_eq!(leaves.len(), num_leaves, "expected #leaves many leaves");
 
         while leaves.len() > 1 {
-            // assert that the number of leaves is a power of two
+            // assert that the number of leaves is always a power of two
             assert!((leaves.len() & (leaves.len() - 1)) == 0);
 
             let mut next_leaves = Vec::with_capacity(leaves.len() / 2);
@@ -195,7 +194,9 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             }
             leaves = next_leaves;
         }
+        // assert that we have reached root
         assert!(leaves.len() == 1);
+
         leaves[0]
     }
 
@@ -265,7 +266,6 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             // index-wise summation of indicators will give the cluster sizes
             // this will be used to take the mean value after computing sum of
             // vectors within the cluster
-
             let cluster_sizes: [AssignedValue<F>; K] = cluster_indicators
                 .clone()
                 .into_iter()
