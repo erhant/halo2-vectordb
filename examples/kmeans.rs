@@ -44,6 +44,7 @@ fn kmeans<F: ScalarField>(
         .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
+    // TODO: make these public
     let (centroids, _) = vectordb_chip
         .kmeans::<K, I>(ctx, &vectors, &|ctx, a, b| distance_chip.euclidean_distance(ctx, a, b));
 

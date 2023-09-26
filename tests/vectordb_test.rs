@@ -21,11 +21,9 @@ mod test {
         const DIM: usize = 5;
         let vectors = common::random_vectors(DIM, 30);
 
-        // fixed iterations since we have to do it that way in our circuit
         let (centroids_native, clusterids_native) =
             vectordb::kmeans::<K, I>(&vectors, &distances::euclidean_distance);
         let (centroids_chip, clusterids_chip) = vectordb::chip_kmeans::<K, I>(&vectors);
-
         common::compare_set_of_vectors(&centroids_native.to_vec(), &centroids_chip.to_vec());
         assert_eq!(clusterids_native, clusterids_chip);
     }

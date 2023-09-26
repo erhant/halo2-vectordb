@@ -22,7 +22,7 @@ pub struct CircuitInput {
     pub b: Vec<f64>,
 }
 
-fn distance_functions<F: ScalarField>(
+fn euclid_bug<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
     make_public: &mut Vec<AssignedValue<F>>,
@@ -38,34 +38,16 @@ fn distance_functions<F: ScalarField>(
     let a: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(&input.a));
     let b: Vec<AssignedValue<F>> = ctx.assign_witnesses(fixed_point_chip.quantize_vector(&input.b));
 
-    let dist: AssignedValue<F> = distance_chip.euclidean_distance(ctx, &a, &b);
-    let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("euclidean distance: {:?}", dist_native);
-    make_public.push(dist);
-
-    let dist: AssignedValue<F> = distance_chip.manhattan_distance(ctx, &a, &b);
-    let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("manhattan distance: {:?}", dist_native);
-    make_public.push(dist);
-
-    let dist: AssignedValue<F> = distance_chip.cosine_distance(ctx, &a, &b);
-    let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("cosine distance: {:?}", dist_native);
-    make_public.push(dist);
-
-    let dist: AssignedValue<F> = distance_chip.hamming_distance(ctx, &a, &b);
-    let dist_native = fixed_point_chip.dequantization(*dist.value());
-    println!("hamming distance: {:?}", dist_native);
-    make_public.push(dist);
-
-    // What do quantized fields for zero and one look like?
-    // println!("1.0 = {:?}", distance_chip.quantize(1.0));
-    // println!("0.0 = {:?}", distance_chip.quantize(0.0));
+    // let mut dists: Vec<AssignedValue<F>> = vec![];
+    for _ in 0..10 {
+        let dist: AssignedValue<F> = distance_chip.euclidean_distance(ctx, &a, &b);
+        // dists.push(dist);
+    }
 }
 
 fn main() {
     env_logger::init();
 
     let args = Cli::parse();
-    run(distance_functions, args);
+    run(euclid_bug, args);
 }

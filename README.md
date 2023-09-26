@@ -35,7 +35,7 @@ Run the examples via one of the following:
 
 ```sh
 # demonstrate distance computations
-LOOKUP_BITS=12 cargo run --example distances -- --name distances --input vec4.in -k 13 mock
+LOOKUP_BITS=12 cargo run --example distances -- --name distances -k 13 mock
 
 # example merkle commitment to vectors
 LOOKUP_BITS=12 cargo run --example merkle -- --name merkle -k 13 mock
@@ -45,6 +45,9 @@ LOOKUP_BITS=12 cargo run --example exhaustive -- --name exhaustive -k 13 mock
 
 # compute centroids
 LOOKUP_BITS=12 cargo run --example kmeans -- --name kmeans -k 13 mock
+
+# tmp bugfix
+LOOKUP_BITS=12 cargo run --example euclid -- --name euclid -k 13 mock
 ```
 
 You can provide a specific input via the `--input <input-name>` option.

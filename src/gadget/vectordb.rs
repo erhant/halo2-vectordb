@@ -119,17 +119,17 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
         let min: AssignedValue<F> = distances
             .clone()
             .into_iter()
-            .reduce(|acc, d| self.fixed_point_gate().qmin(ctx, acc, d))
+            .reduce(|acc, d| self.fixed_point_gate.qmin(ctx, acc, d))
             .unwrap();
         let min_indicator: Vec<AssignedValue<F>> = distances
             .into_iter()
-            .map(|d| self.fixed_point_gate().gate().is_equal(ctx, min, d))
+            .map(|d| self.fixed_point_gate.gate().is_equal(ctx, min, d))
             .collect();
 
         // get the most similar vector by selecting each index with indicator
         let result: Vec<AssignedValue<F>> = (0..vectors[0].len())
             .map(|i| {
-                self.fixed_point_gate().gate().select_by_indicator(
+                self.fixed_point_gate.gate().select_by_indicator(
                     ctx,
                     vectors.iter().map(|d| d[i]),
                     min_indicator.iter().copied(),
@@ -157,7 +157,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             .map(|v| {
                 poseidon.clear();
                 poseidon.update(&v.as_slice());
-                poseidon.squeeze(ctx, self.fixed_point_gate().gate()).unwrap()
+                poseidon.squeeze(ctx, self.fixed_point_gate.gate()).unwrap()
             })
             .collect();
 
@@ -190,7 +190,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             for i in (0..leaves.len()).step_by(2) {
                 poseidon.clear();
                 poseidon.update(&[leaves[i], leaves[i + 1]]);
-                next_leaves.push(poseidon.squeeze(ctx, self.fixed_point_gate().gate()).unwrap());
+                next_leaves.push(poseidon.squeeze(ctx, self.fixed_point_gate.gate()).unwrap());
             }
             leaves = next_leaves;
         }
@@ -213,6 +213,10 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
     where
         F: ScalarField,
     {
+        // ones and zeros needed for indicators
+        let one: AssignedValue<F> = ctx.load_constant(self.fixed_point_gate.quantization(1.0));
+        let zero: AssignedValue<F> = ctx.load_zero(); // quantized zero is equal to native zero
+
         // take first K vectors as the initial centroids
         let mut centroids: [Vec<AssignedValue<F>>; K] = vectors
             .iter()
@@ -222,10 +226,6 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             .try_into()
             .unwrap();
 
-        // ones and zeros needed for indicators
-        let one: AssignedValue<F> = ctx.load_constant(self.fixed_point_gate().quantization(1.0));
-        let zero: AssignedValue<F> = ctx.load_zero(); // quantized zero is equal to native zero
-
         let mut cluster_indicators: Vec<[AssignedValue<F>; K]> = vec![];
 
         for _iter in 0..I {
@@ -234,29 +234,29 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             // instead of assigning a cluster id to each vector,
             // we will store an indicator (one-hot encoding) for that cluster
             // suppose K = 4 and vectors A and B belong to 1, 3 respectively
-            // we would have [1, 0, 0, 0] and [0, 0, 1, 0] as the indicators
+            // we would have [0, 1, 0, 0] and [0, 0, 0, 1] as the indicators.
             cluster_indicators = vectors
-                .clone()
                 .iter()
                 .map(|v| {
                     // compute distance to centroids
                     let distances: [AssignedValue<F>; K] =
                         centroids.clone().map(|c| distance(ctx, &c, v));
+                    // it works when i assign `[one; K];` instead
 
                     // find the minimum
                     let min: AssignedValue<F> = distances
                         .clone()
                         .into_iter()
-                        .reduce(|min, d| self.fixed_point_gate().qmin(ctx, min, d))
+                        .reduce(|min, d| self.fixed_point_gate.qmin(ctx, min, d))
                         .unwrap();
 
                     // return indicator
                     let indicators: [AssignedValue<F>; K] = distances.map(|d| {
                         // check if distance is the minimum
-                        let eq = self.fixed_point_gate().gate().is_equal(ctx, min, d);
+                        let eq = self.fixed_point_gate.gate().is_equal(ctx, min, d);
 
                         // return 1 if so, 0 otherwise
-                        self.fixed_point_gate().gate().select(ctx, one, zero, eq)
+                        self.fixed_point_gate.gate().select(ctx, one, zero, eq)
                     });
 
                     indicators
@@ -273,7 +273,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
                     // element-wise addition
                     sizes
                         .zip(indicators)
-                        .map(|(size, ind)| self.fixed_point_gate().qadd(ctx, size, ind))
+                        .map(|(size, ind)| self.fixed_point_gate.qadd(ctx, size, ind))
                 })
                 .unwrap();
 
@@ -303,10 +303,10 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
                         // already quantized, and a field 0 is equal to a quantized 0
                         // (note that a quantized 1 is not a field 1)
 
-                        let is_zero = self.fixed_point_gate().gate().is_zero(ctx, sel);
+                        let is_zero = self.fixed_point_gate.gate().is_zero(ctx, sel);
                         vector
                             .into_iter()
-                            .map(|v| self.fixed_point_gate().gate().select(ctx, zero, v, is_zero))
+                            .map(|v| self.fixed_point_gate.gate().select(ctx, zero, v, is_zero))
                             .collect()
                     })
                     .collect();
@@ -319,15 +319,13 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
                         vector
                             .into_iter()
                             .zip(sum)
-                            .map(|(s, v)| self.fixed_point_gate().qadd(ctx, s, v))
+                            .map(|(s, v)| self.fixed_point_gate.qadd(ctx, s, v))
                             .collect()
                     })
                     // divide by cluster size
                     .map(|sum| {
                         sum.into_iter()
-                            .map(|s| {
-                                self.fixed_point_gate().qdiv(ctx, s, cluster_sizes[cluster_id])
-                            })
+                            .map(|s| self.fixed_point_gate.qdiv(ctx, s, cluster_sizes[cluster_id]))
                             .collect()
                     })
                     .unwrap();

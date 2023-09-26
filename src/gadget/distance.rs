@@ -112,7 +112,10 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PREC
         let dist_square = self.fixed_point_gate.inner_product(ctx, ab.clone(), ab);
 
         // take the square root
-        self.fixed_point_gate.qsqrt(ctx, dist_square)
+        let dist = self.fixed_point_gate.qsqrt(ctx, dist_square);
+
+        // println!("{:?}", dist);
+        dist
     }
 
     fn cosine_distance(
@@ -127,7 +130,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PREC
         assert_eq!(a.len(), b.len());
 
         let ab: AssignedValue<F> = self.fixed_point_gate.inner_product(ctx, a.clone(), b.clone()); // sum (a.b)
-        let aa = self.fixed_point_gate().inner_product(ctx, a.clone(), a.clone()); // sum (a^2)
+        let aa = self.fixed_point_gate.inner_product(ctx, a.clone(), a.clone()); // sum (a^2)
         let bb = self.fixed_point_gate.inner_product(ctx, b.clone(), b.clone()); // sum (b^2)
 
         let aa_sqrt = self.fixed_point_gate.qsqrt(ctx, aa);
@@ -136,7 +139,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PREC
         let denom = self.fixed_point_gate.qmul(ctx, aa_sqrt, bb_sqrt);
         let sim = self.fixed_point_gate.qdiv(ctx, ab, denom);
 
-        let one = ctx.load_constant(self.fixed_point_gate().quantization(1.0));
+        let one = ctx.load_constant(self.fixed_point_gate.quantization(1.0));
         self.fixed_point_gate.qsub(ctx, one, sim)
     }
 
@@ -167,7 +170,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> DistanceInstructions<F, PREC
 
         let sim = self.fixed_point_gate.qdiv(ctx, ab_sum_q, len);
 
-        let one = ctx.load_constant(self.fixed_point_gate().quantization(1.0));
+        let one = ctx.load_constant(self.fixed_point_gate.quantization(1.0));
         self.fixed_point_gate.qsub(ctx, one, sim)
     }
 
