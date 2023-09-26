@@ -45,8 +45,10 @@ fn kmeans<F: ScalarField>(
         .collect();
 
     // TODO: make these public
+
     let (centroids, _) = vectordb_chip
-        .kmeans::<K, I>(ctx, &vectors, &|ctx, a, b| distance_chip.euclidean_distance(ctx, a, b));
+        // TODO: until I can solve the bug with euclidean, we are using manhattan distance...
+        .kmeans::<K, I>(ctx, &vectors, &|ctx, a, b| distance_chip.manhattan_distance(ctx, a, b));
 
     // output centroids as public variables
     // centroids.iter().for_each(|c| {
