@@ -2,7 +2,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::fs::read;
 use std::io::Cursor;
 
-use assert_float_eq::afe_is_relative_eq;
+use assert_float_eq::assert_float_relative_eq;
 
 /// Compare `f64` elements of two vectors with relative error.
 ///
