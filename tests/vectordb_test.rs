@@ -34,9 +34,10 @@ mod test {
         let query = common::random_vector(DIM);
         let vectors = common::random_vectors(DIM, 4);
 
-        let result_native =
+        let (idx_native, result_native) =
             vectordb::nearest_vector(&query, &vectors, &distances::euclidean_distance);
-        let result_chip = vectordb::chip_nearest_vector(&query, &vectors);
+        let (idx_chip, result_chip) = vectordb::chip_nearest_vector(&query, &vectors);
         common::compare_vectors(&result_native, &result_chip);
+        assert_eq!(idx_native, idx_chip);
     }
 }

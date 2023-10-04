@@ -37,7 +37,10 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
 
     /// Given a query vector, returns the most similar vector
     /// by doing an exhaustive search over all the given vectors
-    /// and with respect to provided distance function
+    /// and with respect to provided distance function.
+    ///
+    /// Also returns the indicator, that is an array of 0s and 1s where
+    /// only one index has 1, indicating the vector index within the vectors.
     fn nearest_vector(
         &self,
         ctx: &mut Context<F>,
@@ -48,7 +51,7 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
             &Vec<AssignedValue<F>>,
             &Vec<AssignedValue<F>>,
         ) -> AssignedValue<F>,
-    ) -> Vec<AssignedValue<F>>
+    ) -> (Vec<AssignedValue<F>>, Vec<AssignedValue<F>>)
     where
         F: ScalarField;
 
@@ -106,8 +109,8 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             &mut Context<F>,
             &Vec<AssignedValue<F>>,
             &Vec<AssignedValue<F>>,
-        ) -> AssignedValue<F>, // TODO: ask for distance metric function here
-    ) -> Vec<AssignedValue<F>>
+        ) -> AssignedValue<F>,
+    ) -> (Vec<AssignedValue<F>>, Vec<AssignedValue<F>>)
     where
         F: ScalarField,
     {
@@ -137,7 +140,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             })
             .collect();
 
-        result
+        (min_indicator, result)
     }
 
     fn merkle_commitment<const T: usize, const RATE: usize>(

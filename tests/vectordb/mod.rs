@@ -1,6 +1,8 @@
 const LOOKUP_BITS: usize = 13;
 const PRECISION_BITS: u32 = 48;
 
+use std::cmp::Ordering;
+
 use halo2_base::halo2_proofs::halo2curves::bn256::Fr as F;
 use halo2_base::{gates::builder::GateThreadBuilder, AssignedValue};
 use halo2_scaffold::gadget::distance::{DistanceChip, DistanceInstructions};
@@ -129,7 +131,7 @@ pub fn nearest_vector(
     query: &Vec<f64>,
     vectors: &Vec<Vec<f64>>,
     distance: &dyn Fn(&Vec<f64>, &Vec<f64>) -> f64,
-) -> Vec<f64> {
+) -> (usize, Vec<f64>) {
     let distances: Vec<f64> = vectors.iter().map(|v| distance(v, query)).collect();
 
     let min = distances.iter().fold(f64::INFINITY, |a, &b| a.min(b));
@@ -138,12 +140,12 @@ pub fn nearest_vector(
         .iter()
         .enumerate()
         .find(|(i, _)| min == distances[*i])
-        .and_then(|(_, v)| Some(v))
+        .and_then(|(i, v)| Some((i, v.clone())))
         .expect("should have found a minimum")
         .to_owned()
 }
 
-pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> Vec<f64> {
+pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> (usize, Vec<f64>) {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
@@ -156,9 +158,16 @@ pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> Vec<f64
         .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
-    let result = vectordb_chip.nearest_vector(ctx, &qquery, &qvectors, &|ctx, a, b| {
-        distance_chip.euclidean_distance(ctx, a, b)
-    });
+    let (indicator, result) =
+        vectordb_chip.nearest_vector(ctx, &qquery, &qvectors, &|ctx, a, b| {
+            distance_chip.euclidean_distance(ctx, a, b)
+        });
 
-    fixed_point_chip.dequantize_vector(&result)
+    let result = fixed_point_chip.dequantize_vector(&result);
+    let index = indicator
+        .iter()
+        .position(|v| F::one().cmp(v.value()) == Ordering::Equal)
+        .expect("expected 1");
+
+    (index, result)
 }

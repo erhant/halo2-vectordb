@@ -52,7 +52,7 @@ fn exhaustive_merkle<F: ScalarField>(
         .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
-    let result = vectordb_chip.nearest_vector(ctx, &query, &database, &|ctx, a, b| {
+    let (_, result) = vectordb_chip.nearest_vector(ctx, &query, &database, &|ctx, a, b| {
         distance_chip.euclidean_distance(ctx, a, b)
     });
     make_public.extend(result.iter());
