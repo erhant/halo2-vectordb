@@ -1,10 +1,30 @@
+const LOOKUP_BITS: usize = 13;
+const PRECISION_BITS: u32 = 48;
+
 #[macro_use]
 extern crate assert_float_eq;
 use assert_float_eq::afe_is_relative_eq;
+use halo2_base::halo2_proofs::halo2curves::bn256::Fr as F;
+use halo2_base::utils::ScalarField;
+use halo2_scaffold::gadget::{fixed_point::FixedPointChip, vectordb::VectorDBChip};
+use vectordb::chip_kmeans;
 
 mod common;
 mod distances;
 mod vectordb;
+
+/// From a set of vectors and their cluster ids, select
+/// the vectors within that cluster id.
+fn select_cluster(
+    vectors: &Vec<Vec<f64>>,
+    cluster_ids: &Vec<usize>,
+    cluster_id: usize,
+) -> Vec<Vec<f64>> {
+    (0..cluster_ids.len())
+        .filter(|i| cluster_ids[*i] == cluster_id)
+        .map(|i| vectors[i].clone())
+        .collect()
+}
 
 // user-scenario test will be here (or maybe in examples)
 //
@@ -32,12 +52,9 @@ impl<const K: usize, const I: usize> SimpleDatabase<K, I> {
             vectordb::nearest_vector(&vector, &self.centroids, &distances::euclidean_distance);
 
         // get vectors within the cluster
-        let cluster: Vec<Vec<f64>> = (0..self.cluster_ids.len())
-            .filter(|i| self.cluster_ids[*i] == cluster_id)
-            .map(|i| self.database[i].clone())
-            .collect();
+        let cluster = select_cluster(&self.database, &self.cluster_ids, cluster_id);
 
-        // choose nearest vector
+        // choose nearest vector within the cluster
         let (_, result) =
             vectordb::nearest_vector(&vector, &cluster, &distances::euclidean_distance);
 
@@ -49,15 +66,30 @@ struct SimpleVerifiableDatabase<const K: usize, const I: usize> {
     database: Vec<Vec<f64>>,
     cluster_ids: Vec<usize>,
     centroids: Vec<Vec<f64>>,
+    // chip: VectorDBChip<'a, F, PRECISION_BITS>,
+    database_root: F,      // merkle root over the database
+    centroids_root: F,     // merkle root over the centroids
+    cluster_roots: Vec<F>, // one merkle root for each cluster
 }
 
-impl<const K: usize, const I: usize> SimpleVerifiableDatabase<K, I> {
+impl<'a, const K: usize, const I: usize> SimpleVerifiableDatabase<K, I> {
     pub fn new(database: Vec<Vec<f64>>) -> Self {
-        // TODO: return roots and stuff
-        let (centroids, cluster_ids) =
-            vectordb::kmeans::<K, I>(&database, &distances::euclidean_distance);
+        let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+        let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
 
-        Self { database, cluster_ids, centroids: centroids.to_vec() }
+        let (centroids, cluster_ids) = vectordb::chip_kmeans::<K, I>(&database);
+        let centroids = centroids.to_vec();
+
+        let database_root: F = vectordb::chip_merkle(&database);
+        let centroids_root: F = vectordb::chip_merkle(&centroids);
+        let cluster_roots: Vec<F> = (0..centroids.len())
+            .map(|cluster_id| {
+                let cluster = select_cluster(&database, &cluster_ids, cluster_id);
+                vectordb::chip_merkle(&cluster)
+            })
+            .collect();
+
+        Self { database, cluster_ids, centroids, database_root, centroids_root, cluster_roots }
     }
 
     /// Querying (i.e. inference) takes in a query vector, and returns the most similar vector within the database.
@@ -67,10 +99,7 @@ impl<const K: usize, const I: usize> SimpleVerifiableDatabase<K, I> {
             vectordb::nearest_vector(&vector, &self.centroids, &distances::euclidean_distance);
 
         // get vectors within the cluster
-        let cluster: Vec<Vec<f64>> = (0..self.cluster_ids.len())
-            .filter(|i| self.cluster_ids[*i] == cluster_id)
-            .map(|i| self.database[i].clone())
-            .collect();
+        let cluster = select_cluster(&self.database, &self.cluster_ids, cluster_id);
 
         // choose nearest vector
         let (_, result) =

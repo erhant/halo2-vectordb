@@ -11,6 +11,7 @@ use halo2_scaffold::gadget::{
     fixed_point_vec::FixedPointVectorInstructions,
     vectordb::{VectorDBChip, VectorDBInstructions},
 };
+use poseidon::PoseidonChip;
 
 /// A straightforward k-means algorithm.
 ///
@@ -121,6 +122,8 @@ pub fn chip_kmeans<const K: usize, const I: usize>(
         })
         .collect();
 
+    // TODO: find merkle root of cenroids,
+
     (centroids_native, cluster_ids)
 }
 
@@ -170,4 +173,26 @@ pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> (usize,
         .expect("expected 1");
 
     (index, result)
+}
+
+pub fn chip_merkle(vectors: &Vec<Vec<f64>>) -> F {
+    // poseidon params
+    const T: usize = 3;
+    const RATE: usize = 2;
+    const R_F: usize = 8;
+    const R_P: usize = 57;
+
+    let mut builder = GateThreadBuilder::mock();
+    let ctx = builder.main(0);
+    let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+    let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
+    let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
+
+    let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
+        .iter()
+        .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
+        .collect();
+
+    let root = vectordb_chip.merkle_commitment(ctx, &mut poseidon_chip, &qvectors);
+    *root.value()
 }
