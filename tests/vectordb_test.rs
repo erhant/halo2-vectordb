@@ -24,7 +24,7 @@ mod test {
         let (centroids_native, clusterids_native) =
             vectordb::kmeans::<K, I>(&vectors, &distances::euclidean_distance);
         let (centroids_chip, clusterids_chip) = vectordb::chip_kmeans::<K, I>(&vectors);
-        common::compare_set_of_vectors(&centroids_native.to_vec(), &centroids_chip.to_vec());
+        common::assert_multiple_vectors_eq(&centroids_native.to_vec(), &centroids_chip.to_vec());
         assert_eq!(clusterids_native, clusterids_chip);
     }
 
@@ -36,8 +36,8 @@ mod test {
 
         let (idx_native, result_native) =
             vectordb::nearest_vector(&query, &vectors, &distances::euclidean_distance);
-        let (idx_chip, result_chip) = vectordb::chip_nearest_vector(&query, &vectors);
-        common::compare_vectors(&result_native, &result_chip);
+        let (idx_chip, result_chip, _) = vectordb::chip_nearest_vector(&query, &vectors);
+        common::assert_vectors_eq(&result_native, &result_chip);
         assert_eq!(idx_native, idx_chip);
     }
 }

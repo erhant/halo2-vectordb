@@ -1,4 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use halo2_base::utils::ScalarField;
+use std::cmp::Ordering;
 use std::fs::read;
 use std::io::Cursor;
 
@@ -7,7 +9,7 @@ use assert_float_eq::assert_float_relative_eq;
 /// Compare `f64` elements of two vectors with relative error.
 ///
 /// Will fail the test if at least one non-matching element is found.
-pub fn compare_vectors(a: &Vec<f64>, b: &Vec<f64>) {
+pub fn assert_vectors_eq(a: &Vec<f64>, b: &Vec<f64>) {
     assert_eq!(a.len(), b.len());
     a.iter().zip(b).for_each(|(a, b)| assert_float_relative_eq!(*a, *b))
 }
@@ -15,9 +17,14 @@ pub fn compare_vectors(a: &Vec<f64>, b: &Vec<f64>) {
 /// Compare `f64` elements of two sets of vectors with relative error.
 ///
 /// Will fail the test if at least one non-matching element is found within a vector.
-pub fn compare_set_of_vectors(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) {
+pub fn assert_multiple_vectors_eq(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) {
     assert_eq!(a.len(), b.len());
-    a.iter().zip(b).for_each(|(a, b)| compare_vectors(a, b))
+    a.iter().zip(b).for_each(|(a, b)| assert_vectors_eq(a, b))
+}
+
+/// Compare two field elements, returns true if they are equal.
+pub fn compare_fields<F: ScalarField>(p: &F, q: &F) -> bool {
+    p.cmp(q) == Ordering::Equal
 }
 
 /// Generate a random vector with `dim` elements.
@@ -38,7 +45,22 @@ pub fn random_vectors(dim: usize, n: usize) -> Vec<Vec<f64>> {
     vectors
 }
 
-// TODO handle errors
+/// From a set of vectors and their cluster ids, select
+/// the vectors within that cluster id.
+pub fn select_cluster(
+    vectors: &Vec<Vec<f64>>,
+    cluster_ids: &Vec<usize>,
+    cluster_id: usize,
+) -> Vec<Vec<f64>> {
+    assert_eq!(vectors.len(), cluster_ids.len(), "vectors & cluster ids do not  match lengths");
+
+    (0..cluster_ids.len())
+        .filter(|i| cluster_ids[*i] == cluster_id)
+        .map(|i| vectors[i].clone())
+        .collect()
+}
+
+// TODO: handle errors
 // fn main() {
 //     let vecs = fetch_vectors("./res/siftsmall_query.fvecs", 128);
 //     println!("{:?}", vecs.len());

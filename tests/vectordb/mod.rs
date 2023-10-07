@@ -1,7 +1,11 @@
 const LOOKUP_BITS: usize = 13;
 const PRECISION_BITS: u32 = 48;
 
-use std::cmp::Ordering;
+// poseidon params
+const T: usize = 3;
+const RATE: usize = 2;
+const R_F: usize = 8;
+const R_P: usize = 57;
 
 use halo2_base::halo2_proofs::halo2curves::bn256::Fr as F;
 use halo2_base::{gates::builder::GateThreadBuilder, AssignedValue};
@@ -12,6 +16,8 @@ use halo2_scaffold::gadget::{
     vectordb::{VectorDBChip, VectorDBInstructions},
 };
 use poseidon::PoseidonChip;
+
+use crate::common;
 
 /// A straightforward k-means algorithm.
 ///
@@ -43,7 +49,7 @@ pub fn kmeans<const K: usize, const I: usize>(
             // compute distances to every centroid
             let distances: Vec<f64> = centroids.iter().map(|c| distance(v, c)).collect();
 
-            // find the minimum (TODO: remove clone)
+            // find the minimum
             let min: f64 = distances.iter().fold(f64::INFINITY, |a, &b| a.min(b));
 
             // return the corresponding index as the cluster id
@@ -122,8 +128,6 @@ pub fn chip_kmeans<const K: usize, const I: usize>(
         })
         .collect();
 
-    // TODO: find merkle root of cenroids,
-
     (centroids_native, cluster_ids)
 }
 
@@ -148,12 +152,13 @@ pub fn nearest_vector(
         .to_owned()
 }
 
-pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> (usize, Vec<f64>) {
+pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> (usize, Vec<f64>, F) {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
     let distance_chip = DistanceChip::default(&fixed_point_chip);
     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
+    let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let qquery: Vec<AssignedValue<F>> = fixed_point_chip.quantize_and_assign_vector(ctx, query);
     let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
@@ -169,19 +174,15 @@ pub fn chip_nearest_vector(query: &Vec<f64>, vectors: &Vec<Vec<f64>>) -> (usize,
     let result = fixed_point_chip.dequantize_vector(&result);
     let index = indicator
         .iter()
-        .position(|v| F::one().cmp(v.value()) == Ordering::Equal)
+        .position(|v| common::compare_fields::<F>(v.value(), &F::one()))
         .expect("expected 1");
 
-    (index, result)
+    let root = vectordb_chip.merkle_commitment::<T, RATE>(ctx, &mut poseidon_chip, &qvectors);
+
+    (index, result, *root.value())
 }
 
 pub fn chip_merkle(vectors: &Vec<Vec<f64>>) -> F {
-    // poseidon params
-    const T: usize = 3;
-    const RATE: usize = 2;
-    const R_F: usize = 8;
-    const R_P: usize = 57;
-
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
