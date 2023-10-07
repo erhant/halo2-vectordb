@@ -216,6 +216,7 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
     where
         F: ScalarField,
     {
+        assert!(K < vectors.len());
         // ones and zeros needed for indicators
         let one: AssignedValue<F> = ctx.load_constant(self.fixed_point_gate.quantization(1.0));
         let zero: AssignedValue<F> = ctx.load_zero(); // quantized zero is equal to native zero

@@ -32,6 +32,7 @@ pub fn kmeans<const K: usize, const I: usize>(
     vectors: &Vec<Vec<f64>>,
     distance: &dyn Fn(&Vec<f64>, &Vec<f64>) -> f64,
 ) -> ([Vec<f64>; K], Vec<usize>) {
+    assert!(K < vectors.len(), "you must provide at least K many vectors");
     // dimensions of each vector
     let n = vectors[0].len();
 

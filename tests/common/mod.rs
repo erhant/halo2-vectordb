@@ -38,6 +38,15 @@ pub fn random_vector(dim: usize) -> Vec<f64> {
     vector
 }
 
+/// Generate a random vector with integers in range `[0, max)`.
+pub fn random_indices(dim: usize, max: usize) -> Vec<usize> {
+    let mut vector: Vec<usize> = Vec::with_capacity(dim);
+    for _ in 0..dim {
+        vector.push(rand::random::<usize>() % max)
+    }
+    vector
+}
+
 /// Generate `n` random vectors with `dim` elements.
 pub fn random_vectors(dim: usize, n: usize) -> Vec<Vec<f64>> {
     let mut vectors: Vec<Vec<f64>> = Vec::with_capacity(n);
@@ -70,7 +79,8 @@ pub fn select_cluster(
         .collect()
 }
 
-/// Read vectors from disk.
+/// Read vectors from disk. We mainly use this for the dataset downloaded
+/// from [this link](http://corpus-texmex.irisa.fr/).
 ///
 /// For example:
 /// ```rs
@@ -78,8 +88,7 @@ pub fn select_cluster(
 /// println!("{:?}", vecs.len());
 /// ```
 pub fn read_vectors_from_disk(path: &str, dims: usize) -> Vec<f32> {
-    // TODO: handle errors within this function
-    let data_r = read(path).unwrap();
+    let data_r = read(path).expect("expected file at path");
     let data_r_slice = data_r.as_slice();
 
     let num_vectors = data_r.len() / (4 + dims * 4);
@@ -88,14 +97,39 @@ pub fn read_vectors_from_disk(path: &str, dims: usize) -> Vec<f32> {
     let mut reader = Cursor::new(data_r_slice);
     for _i in 0..num_vectors {
         // read dimension of the vector
-        let dim = reader.read_u32::<LittleEndian>().unwrap();
+        let dim = reader.read_u32::<LittleEndian>().expect("could not read dimension");
         assert_eq!(dim, dims as u32, "unexpected vector dimension");
 
         // read vector data
         for _j in 0..dim {
-            data_w.push(reader.read_f32::<LittleEndian>().unwrap());
+            data_w.push(reader.read_f32::<LittleEndian>().expect("could not read vector data"));
         }
     }
 
     data_w
+}
+
+/// Given a single vector that has all vectors in it (i.e. the result of
+/// `read_vectors_from_disk`) selects few vectors and returns them.
+///
+/// The `select` array is an array of indices that correspond to vector indices.
+pub fn select_from_vectors(vectors: &Vec<f32>, dims: usize, select: &Vec<usize>) -> Vec<Vec<f64>> {
+    // ensure that `vectors` has N vectors, each of `dims` dimension
+    assert_eq!(vectors.len() % dims, 0, "dimension is wrong");
+    let num_vecs = vectors.len() / dims;
+
+    assert!(select.iter().all(|s| *s < num_vecs), "one of the indices is out-of-bounds");
+
+    let result = select
+        .iter()
+        .map(|s| {
+            let mut selected: Vec<f64> = Vec::with_capacity(dims);
+            for i in *s..(*s + dims) {
+                selected.push(vectors[i] as f64);
+            }
+            selected
+        })
+        .collect();
+
+    result
 }

@@ -41,11 +41,11 @@ We implement two chips, one for distance metrics in halo2, and the other for bas
 
 `VectorDBChip` implements basic vector database functionality over a set of vectors. Similar to `DistanceChip`, it requires a `FixedPointChip` to operate over quantized values. It exposes the following functions:
 
-- `nearest_vector` is given a set of vectors and a query vector, and finds the vector that is most similar to the query w.r.t. a given distance function. It also returns an indicator (i.e. one-hot encoded vector that indicates the index of the result vector) which may be used at later steps.
-- `merkle_commitment` commits to a set of vectors using a Merkle tree with Poseidon hashes. If the given set does not include power-of-two many elements, it will pad zeros to the remaining leaves.
-- `kmeans` is given a set of vectors, a `K` parameter to determine the number of centroids and an `I` parameter to determine the number of iterations. K-means usually is an iterative algorithm that terminates when the centroids are no more updated; however, such a control-flow is not possible in a zk-circuit. Therefore, the `I` parameter determines a fixed number of iterations.
+- `nearest_vector` takes a set of vectors and a query vector, and finds the vector that is most similar to the query w.r.t. a given distance function. It also returns an indicator (i.e. one-hot encoded vector that indicates the index of the result vector) which may be used at later steps.
+- `merkle_commitment` takes a set of vectors, and commits to them using a Merkle tree with Poseidon hashes. If the given set does not include power-of-two many elements, it will pad zeros to the remaining leaves. In our scenario, we only need the entire vector or none at all, and for that reason we do not care about committing to elements within the vector. As such, we first hash the entire vector, and then treat that hash as the leaf node.
+- `kmeans` takes a set of vectors, a `K` constant to determine the number of centroids and an `I` constant to determine the number of iterations. K-means usually is an iterative algorithm that terminates when the centroids are no more updated; however, such a control-flow is not possible in a zk-circuit. Therefore, the `I` parameter determines a fixed number of iterations.
 
-We also have a trait `FixedPointVectorInstructions` and implement it for the `FixedPointChip`, which are simple utility functions to quantize and dequantize vectors.
+We also have a trait `FixedPointVectorInstructions` and its implementation for the `FixedPointChip`, which are simple utility functions to quantize and dequantize vectors.
 
 <!-- ## Demonstration
 
