@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{common, distances, vectordb};
 use halo2_base::halo2_proofs::halo2curves::bn256::Fr as F;
 pub struct DemoDB<const K: usize, const I: usize> {

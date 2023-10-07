@@ -1,9 +1,9 @@
-mod common;
-mod distances;
-
 #[macro_use]
 extern crate assert_float_eq;
 use assert_float_eq::afe_is_relative_eq;
+
+mod common;
+mod distances;
 
 #[cfg(test)]
 mod test {

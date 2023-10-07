@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 const LOOKUP_BITS: usize = 13;
 const PRECISION_BITS: u32 = 48;
 

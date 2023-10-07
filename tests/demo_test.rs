@@ -1,6 +1,3 @@
-const LOOKUP_BITS: usize = 13;
-const PRECISION_BITS: u32 = 48;
-
 #[macro_use]
 extern crate assert_float_eq;
 
@@ -37,10 +34,14 @@ mod test {
 
     #[test]
     fn test_demo_real() {
-        let vectors = common::random_vectors(DIM, NUM_VECS);
-        let query = if USE_RANDOM_VECTOR { common::random_vector(DIM) } else { vectors[0].clone() };
+        const DIM: usize = 128;
+        const NUM_VECS: usize = 4;
         const K: usize = 2;
         const I: usize = 4;
+
+        let vectors = common::random_vectors(DIM, NUM_VECS);
+        // let query = common::random_vector(DIM);
+        let query = vectors[0].clone();
 
         // native results
         let db_native = demo::DemoDB::<K, I>::new(vectors.clone());

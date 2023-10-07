@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use byteorder::{LittleEndian, ReadBytesExt};
 use halo2_base::utils::ScalarField;
 use std::cmp::Ordering;
@@ -46,7 +48,15 @@ pub fn random_vectors(dim: usize, n: usize) -> Vec<Vec<f64>> {
 }
 
 /// From a set of vectors and their cluster ids, select
-/// the vectors within that cluster id.
+/// the vectors within that cluster id. For example:
+///
+/// ```rs
+/// vectors     = [a, b, c, d, e]
+/// cluster_ids = [0, 1, 0, 2, 1]
+/// cluster_id  = 1
+/// // returns:
+/// [c, e]
+/// ```
 pub fn select_cluster(
     vectors: &Vec<Vec<f64>>,
     cluster_ids: &Vec<usize>,
@@ -60,12 +70,6 @@ pub fn select_cluster(
         .collect()
 }
 
-// TODO: handle errors
-// fn main() {
-//     let vecs = fetch_vectors("./res/siftsmall_query.fvecs", 128);
-//     println!("{:?}", vecs.len());
-// }
-
 /// Read vectors from disk.
 ///
 /// For example:
@@ -74,6 +78,7 @@ pub fn select_cluster(
 /// println!("{:?}", vecs.len());
 /// ```
 pub fn read_vectors_from_disk(path: &str, dims: usize) -> Vec<f32> {
+    // TODO: handle errors within this function
     let data_r = read(path).unwrap();
     let data_r_slice = data_r.as_slice();
 

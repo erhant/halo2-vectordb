@@ -45,6 +45,8 @@ We implement two chips, one for distance metrics in halo2, and the other for bas
 - `merkle_commitment` commits to a set of vectors using a Merkle tree with Poseidon hashes. If the given set does not include power-of-two many elements, it will pad zeros to the remaining leaves.
 - `kmeans` is given a set of vectors, a `K` parameter to determine the number of centroids and an `I` parameter to determine the number of iterations. K-means usually is an iterative algorithm that terminates when the centroids are no more updated; however, such a control-flow is not possible in a zk-circuit. Therefore, the `I` parameter determines a fixed number of iterations.
 
+We also have a trait `FixedPointVectorInstructions` and implement it for the `FixedPointChip`, which are simple utility functions to quantize and dequantize vectors.
+
 <!-- ## Demonstration
 
 A demonstrative test suite can be found at [`demo_test`](./tests/demo_test.rs). It does the following:
