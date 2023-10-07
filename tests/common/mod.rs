@@ -65,7 +65,15 @@ pub fn select_cluster(
 //     let vecs = fetch_vectors("./res/siftsmall_query.fvecs", 128);
 //     println!("{:?}", vecs.len());
 // }
-pub fn fetch_vectors(path: &str, dims: usize) -> Vec<f32> {
+
+/// Read vectors from disk.
+///
+/// For example:
+/// ```rs
+/// let vecs = read_vectors_from_disk("./res/siftsmall_query.fvecs", 128);
+/// println!("{:?}", vecs.len());
+/// ```
+pub fn read_vectors_from_disk(path: &str, dims: usize) -> Vec<f32> {
     let data_r = read(path).unwrap();
     let data_r_slice = data_r.as_slice();
 

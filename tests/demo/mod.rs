@@ -36,10 +36,9 @@ pub struct DemoZKDB<const K: usize, const I: usize> {
     database: Vec<Vec<f64>>,
     cluster_ids: Vec<usize>,
     centroids: Vec<Vec<f64>>,
-    // chip: VectorDBChip<'a, F, PRECISION_BITS>,
-    database_root: F,      // merkle root over the database
-    centroids_root: F,     // merkle root over the centroids
     cluster_roots: Vec<F>, // one merkle root for each cluster
+    centroids_root: F,     // merkle root over the centroids
+    pub database_root: F,  // merkle root over the database
 }
 
 impl<'a, const K: usize, const I: usize> DemoZKDB<K, I> {

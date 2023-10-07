@@ -128,6 +128,8 @@ pub fn chip_kmeans<const K: usize, const I: usize>(
         })
         .collect();
 
+    // TODO: return roots and stuff
+
     (centroids_native, cluster_ids)
 }
 
