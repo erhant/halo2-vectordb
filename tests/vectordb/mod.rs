@@ -92,12 +92,13 @@ pub fn kmeans<const K: usize, const I: usize>(
 
 pub fn chip_kmeans<const K: usize, const I: usize>(
     vectors: &Vec<Vec<f64>>,
-) -> ([Vec<f64>; K], Vec<usize>) {
+) -> ([Vec<f64>; K], Vec<usize>, F, F, Vec<F>) {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
     let distance_chip = DistanceChip::default(&fixed_point_chip);
     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
+    let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
         .iter()
@@ -131,7 +132,16 @@ pub fn chip_kmeans<const K: usize, const I: usize>(
         })
         .collect();
 
-    // TODO: return roots and stuff
+    // FIXME: return roots and stuff
+    let root = vectordb_chip.merkle_commitment::<T, RATE>(ctx, &mut poseidon_chip, &qvectors);
+    let vectors_root: F = vectordb::chip_merkle(vectors);
+    let centroids_root: F = vectordb::chip_merkle(&centroids);
+    let cluster_roots: Vec<F> = (0..centroids.len())
+        .map(|cluster_id| {
+            let cluster = common::select_cluster(&database, &cluster_ids, cluster_id);
+            vectordb::chip_merkle(&cluster)
+        })
+        .collect();
 
     (centroids_native, cluster_ids)
 }

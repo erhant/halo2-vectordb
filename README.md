@@ -47,11 +47,11 @@ We implement two chips, one for distance metrics in halo2, and the other for bas
 
 We also have a trait `FixedPointVectorInstructions` and its implementation for the `FixedPointChip`, which are simple utility functions to quantize and dequantize vectors.
 
-<!-- ## Demonstration
+<!-- ### Demonstration
 
 A demonstrative test suite can be found at [`demo_test`](./tests/demo_test.rs). It does the following:
 
-- u -->
+- First, trains a database with Rust code, creating a cluster  -->
 
 ## Examples
 
@@ -81,13 +81,16 @@ You can provide a specific input via the `--input <input-name>` option.
 
 ## Testing
 
-We plan on testing our implementations over vectors from `ANN_SIFT_10K` by [Jégou et al.](https://inria.hal.science/inria-00514462/en) from [Corpus-Texmex](http://corpus-texmex.irisa.fr/), which is composed of 10K 128-dimensional vectors. We have downloaded the dataset and store it under `res` folder.
-
 To run tests:
 
 ```sh
 cargo test
 ```
+
+Some of the tests make use of the `ANN_SIFT_10K` dataset by [Jégou et al.](https://inria.hal.science/inria-00514462/en) which can be downloaded at [Corpus-Texmex](http://corpus-texmex.irisa.fr/). This dataset 128-dimensional vectors. Within our tests folder, the `common` module exposes two functions to read these vectors:
+
+- `read_vectors_from_disk` takes a path and dimension (128 in this case) and reads the `.fvec` files from the dataset, returning a single vector of `f32` values. This single vector is composed of all vector elements, composed together.
+- `select_from_vectors` takes that single vector and a list of indices, and returns the selected vectors only.
 
 ## Acknowledgements
 

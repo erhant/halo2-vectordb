@@ -2,6 +2,7 @@
 
 use crate::{common, distances, vectordb};
 use halo2_base::halo2_proofs::halo2curves::bn256::Fr as F;
+
 pub struct DemoDB<const K: usize, const I: usize> {
     database: Vec<Vec<f64>>,
     cluster_ids: Vec<usize>,
@@ -9,7 +10,7 @@ pub struct DemoDB<const K: usize, const I: usize> {
 }
 
 impl<const K: usize, const I: usize> DemoDB<K, I> {
-    /// Create a new d
+    /// Create a new database
     pub fn new(database: Vec<Vec<f64>>) -> Self {
         let (centroids, cluster_ids) =
             vectordb::kmeans::<K, I>(&database, &distances::euclidean_distance);
@@ -70,7 +71,7 @@ impl<'a, const K: usize, const I: usize> DemoZKDB<K, I> {
             vectordb::chip_nearest_vector(&vector, &self.centroids);
         assert!(
             common::compare_fields(&self.centroids_root, &centroids_root),
-            "centriod root do not match"
+            "centroid roots do not match"
         );
 
         // get vectors within the cluster
@@ -80,7 +81,7 @@ impl<'a, const K: usize, const I: usize> DemoZKDB<K, I> {
         let (_, result, cluster_root) = vectordb::chip_nearest_vector(&vector, &cluster);
         assert!(
             common::compare_fields(&self.cluster_roots[cluster_id], &cluster_root),
-            "cluster root do not match"
+            "cluster roots do not match"
         );
 
         result

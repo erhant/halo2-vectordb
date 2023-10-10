@@ -197,9 +197,9 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
             }
             leaves = next_leaves;
         }
-        // assert that we have reached root
-        assert!(leaves.len() == 1);
 
+        // we must have reached the root node
+        assert!(leaves.len() == 1);
         leaves[0]
     }
 
