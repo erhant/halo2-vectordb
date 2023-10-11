@@ -32,8 +32,8 @@ fn kmeans<F: ScalarField>(
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
     const PRECISION_BITS: u32 = 48;
-    const K: usize = 2;
-    const I: usize = 4;
+    const K: usize = 4;
+    const I: usize = 10;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
     let distance_chip = DistanceChip::default(&fixed_point_chip);
     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
@@ -44,18 +44,16 @@ fn kmeans<F: ScalarField>(
         .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
         .collect();
 
-    // TODO: make these public
-
     let (centroids, _) = vectordb_chip
-        // TODO: until I can solve the bug with euclidean, we are using manhattan distance...
-        .kmeans::<K, I>(ctx, &vectors, &|ctx, a, b| distance_chip.manhattan_distance(ctx, a, b));
+        // FIXME: until I can solve the bug with euclidean, we are not using Euclidean distance...
+        .kmeans::<K, I>(ctx, &vectors, &|ctx, a, b| distance_chip.cosine_distance(ctx, a, b));
 
     // output centroids as public variables
-    // centroids.iter().for_each(|c| {
-    //     c.iter().for_each(|c_i| {
-    //         make_public.push(*c_i);
-    //     })
-    // });
+    centroids.iter().for_each(|c| {
+        c.iter().for_each(|c_i| {
+            make_public.push(*c_i);
+        })
+    });
 
     let centroids_native: [Vec<f64>; K] =
         centroids.map(|centroid| fixed_point_chip.dequantize_vector(&centroid));

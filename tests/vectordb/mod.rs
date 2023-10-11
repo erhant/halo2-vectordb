@@ -92,7 +92,7 @@ pub fn kmeans<const K: usize, const I: usize>(
 
 pub fn chip_kmeans<const K: usize, const I: usize>(
     vectors: &Vec<Vec<f64>>,
-) -> ([Vec<f64>; K], Vec<usize>, F, F, Vec<F>) {
+) -> ([Vec<f64>; K], Vec<usize>) {
     let mut builder = GateThreadBuilder::mock();
     let ctx = builder.main(0);
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
@@ -132,19 +132,70 @@ pub fn chip_kmeans<const K: usize, const I: usize>(
         })
         .collect();
 
-    // FIXME: return roots and stuff
-    let root = vectordb_chip.merkle_commitment::<T, RATE>(ctx, &mut poseidon_chip, &qvectors);
-    let vectors_root: F = vectordb::chip_merkle(vectors);
-    let centroids_root: F = vectordb::chip_merkle(&centroids);
-    let cluster_roots: Vec<F> = (0..centroids.len())
-        .map(|cluster_id| {
-            let cluster = common::select_cluster(&database, &cluster_ids, cluster_id);
-            vectordb::chip_merkle(&cluster)
-        })
-        .collect();
-
     (centroids_native, cluster_ids)
 }
+
+// pub fn chip_kmeans_with_roots<const K: usize, const I: usize>(
+//     vectors: &Vec<Vec<f64>>,
+// ) -> ([Vec<f64>; K], Vec<usize>, F, F, Vec<F>) {
+//     let mut builder = GateThreadBuilder::mock();
+//     let ctx = builder.main(0);
+//     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
+//     let distance_chip = DistanceChip::default(&fixed_point_chip);
+//     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
+//     let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
+
+//     let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
+//         .iter()
+//         .map(|v| ctx.assign_witnesses(fixed_point_chip.quantize_vector(&v)))
+//         .collect();
+
+//     let (centroids, cluster_indicators) =
+//         vectordb_chip.kmeans::<K, I>(ctx, &qvectors, &|ctx, a, b| {
+//             distance_chip.euclidean_distance(ctx, a, b)
+//         });
+
+//     let centroids_native: [Vec<f64>; K] =
+//         centroids.map(|centroid| fixed_point_chip.dequantize_vector(&centroid));
+
+//     // a vector of 1.0s and 0.0s for each vector
+//     let cluster_indicators_native: Vec<[f64; K]> = cluster_indicators
+//         .into_iter()
+//         .map(|centroid| fixed_point_chip.dequantize_array(&centroid))
+//         .collect();
+
+//     let cluster_ids: Vec<usize> = cluster_indicators_native
+//         .into_iter()
+//         .map(|cluster_indicator| {
+//             // the first index that has 1 is the cluster id
+//             for (i, ind) in cluster_indicator.iter().enumerate() {
+//                 if *ind == 1.0 {
+//                     return i;
+//                 }
+//             }
+//             unreachable!("expected 1 to appear in indicator");
+//         })
+//         .collect();
+
+//     // Merkle root over the database
+//     let vectors_root: F =
+//         *vectordb_chip.merkle_commitment::<T, RATE>(ctx, &mut poseidon_chip, &qvectors).value();
+
+//     // Merkle root over the centroids
+//     let centroids_root: F = *vectordb_chip
+//         .merkle_commitment::<T, RATE>(ctx, &mut poseidon_chip, &centroids.to_vec())
+//         .value();
+
+//     // Merkle root over the clusters
+//     let cluster_roots: Vec<F> = (0..centroids.len())
+//         .map(|cluster_id| {
+//             let cluster = common::select_cluster_within_chip(&qvectors, &cluster_ids, cluster_id);
+//             vectordb_chip.mean_merkle::<T, RATE>(ctx, &mut poseidon, &cluster, expected_mean)
+//         })
+//         .collect();
+
+//     (centroids_native, cluster_ids)
+// }
 
 /// An exhaustive search to find the most similar vector among a database to a given query vector.
 ///

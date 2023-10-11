@@ -22,6 +22,7 @@ pub struct CircuitInput {
     pub b: Vec<f64>,
 }
 
+// TODO: this example is for bugfix purposes
 fn euclid_bug<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,

@@ -55,6 +55,22 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
     where
         F: ScalarField;
 
+    /// Given a set of vectors and a mean vector, asserts that the mean of these vectors result in that
+    /// given vector; and returns a Merkle commitment to the given vectors.
+    ///
+    /// This is mostly used for cluster commitments at the end of K-means.
+    ///
+    /// TODO: It is possible for an adversary to construct another set of vectors that may result in the centroid!
+    // fn mean_merkle<const T: usize, const RATE: usize>(
+    //     &self,
+    //     ctx: &mut Context<F>,
+    //     poseidon: &mut PoseidonChip<F, T, RATE>,
+    //     vectors: &Vec<Vec<AssignedValue<F>>>,
+    //     expected_mean: &Vec<AssignedValue<F>>,
+    // ) -> AssignedValue<F>
+    // where
+    //     F: ScalarField;
+
     /// Commits to an array of vectors.
     fn merkle_commitment<const T: usize, const RATE: usize>(
         &self,
@@ -99,6 +115,37 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
     fn strategy(&self) -> VectorDBStrategy {
         self.strategy
     }
+
+    // fn mean_merkle<const T: usize, const RATE: usize>(
+    //     &self,
+    //     ctx: &mut Context<F>,
+    //     poseidon: &mut PoseidonChip<F, T, RATE>,
+    //     vectors: &Vec<Vec<AssignedValue<F>>>,
+    //     expected_mean: &Vec<AssignedValue<F>>,
+    // ) -> AssignedValue<F>
+    // where
+    //     F: ScalarField,
+    // {
+    //     let len = ctx.load_constant(self.fixed_point_gate.quantization(vectors.len() as f64));
+
+    //     let mean: Vec<AssignedValue<F>> = vectors
+    //         .clone()
+    //         .into_iter()
+    //         // sum everything
+    //         .reduce(|sum, vector| {
+    //             vector
+    //                 .iter()
+    //                 .zip(sum)
+    //                 .map(|(s, v)| self.fixed_point_gate.qadd(ctx, *s, v))
+    //                 .collect()
+    //         })
+    //         // divide by length
+    //         .map(|sum| &sum.into_iter().map(|s| self.fixed_point_gate.qdiv(ctx, s, len)).collect())
+    //         .unwrap();
+
+    //     // return commitment to vectors
+    //     self.merkle_commitment(ctx, poseidon, vectors)
+    // }
 
     fn nearest_vector(
         &self,

@@ -49,6 +49,8 @@ impl<'a, const K: usize, const I: usize> DemoZKDB<K, I> {
         let (centroids, cluster_ids) = vectordb::chip_kmeans::<K, I>(&database);
         let centroids = centroids.to_vec();
 
+        // FIXME: these should be done in the same circuit
+        // however with the current costs as is, it would make things even worse
         let database_root: F = vectordb::chip_merkle(&database);
         let centroids_root: F = vectordb::chip_merkle(&centroids);
         let cluster_roots: Vec<F> = (0..centroids.len())

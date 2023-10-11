@@ -47,11 +47,15 @@ We implement two chips, one for distance metrics in halo2, and the other for bas
 
 We also have a trait `FixedPointVectorInstructions` and its implementation for the `FixedPointChip`, which are simple utility functions to quantize and dequantize vectors.
 
-<!-- ### Demonstration
+### Demonstration
 
-A demonstrative test suite can be found at [`demo_test`](./tests/demo_test.rs). It does the following:
+A demonstrative test suite can be found at [`demo_test`](./tests/demo_test.rs):
 
-- First, trains a database with Rust code, creating a cluster  -->
+- First, we train a database without any ZK circuits involved, resulting in `K` centroids & clusters.
+- Then, we train another database with Halo2 circuits, resulting in `K` centroids & clusters along with `K+2` merkle roots.
+- A random query vector is given to both databases, and results are compared element-wise with relative error. Note that fixed-point precision
+  in not as accurate as the `f64` Rust implementation.
+- The merkle roots are compared between indexing and query phases, and are expected to match.
 
 ## Examples
 
@@ -67,12 +71,12 @@ LOOKUP_BITS=12 cargo run --example merkle -- \
   --name merkle -k 13 mock
 
 # exhaustively find the similar vector & commit to the database
-LOOKUP_BITS=12 cargo run --example exhaustive -- \
-  --name exhaustive -k 13 mock
+LOOKUP_BITS=12 cargo run --example query -- \
+  --name query -k 13 mock
 
 # compute centroids
-LOOKUP_BITS=12 cargo run --example kmeans -- \
-  --name kmeans -k 13 mock
+LOOKUP_BITS=15 cargo run --example kmeans -- \
+  --name kmeans -k 16 mock
 ```
 
 <!-- LOOKUP_BITS=12 cargo run --example euclid -- --name euclid -k 13 mock -->

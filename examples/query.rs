@@ -38,7 +38,7 @@ fn exhaustive_merkle<F: ScalarField>(
 
     let lookup_bits =
         var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS not set")).parse().unwrap();
-    const PRECISION_BITS: u32 = 32;
+    const PRECISION_BITS: u32 = 48;
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(lookup_bits);
     let distance_chip = DistanceChip::default(&fixed_point_chip);
     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
@@ -53,7 +53,7 @@ fn exhaustive_merkle<F: ScalarField>(
         .collect();
 
     let (_, result) = vectordb_chip.nearest_vector(ctx, &query, &database, &|ctx, a, b| {
-        distance_chip.euclidean_distance(ctx, a, b)
+        distance_chip.cosine_distance(ctx, a, b)
     });
     make_public.extend(result.iter());
 
@@ -68,6 +68,8 @@ fn exhaustive_merkle<F: ScalarField>(
     let root = vectordb_chip.merkle_commitment(ctx, &mut poseidon_chip, &database);
     make_public.push(root);
     println!("Merkle Root: {:?}", root.value());
+
+    println!("#vectors: {:?}", database.len());
 }
 
 fn main() {

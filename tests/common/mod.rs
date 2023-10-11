@@ -2,6 +2,7 @@
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use halo2_base::utils::ScalarField;
+use halo2_base::AssignedValue;
 use std::cmp::Ordering;
 use std::fs::read;
 use std::io::Cursor;
@@ -71,6 +72,19 @@ pub fn select_cluster(
     cluster_ids: &Vec<usize>,
     cluster_id: usize,
 ) -> Vec<Vec<f64>> {
+    assert_eq!(vectors.len(), cluster_ids.len(), "vectors & cluster ids do not  match lengths");
+
+    (0..cluster_ids.len())
+        .filter(|i| cluster_ids[*i] == cluster_id)
+        .map(|i| vectors[i].clone())
+        .collect()
+}
+
+pub fn select_cluster_within_chip<F: ScalarField>(
+    vectors: &Vec<Vec<AssignedValue<F>>>,
+    cluster_ids: &Vec<usize>,
+    cluster_id: usize,
+) -> Vec<Vec<AssignedValue<F>>> {
     assert_eq!(vectors.len(), cluster_ids.len(), "vectors & cluster ids do not  match lengths");
 
     (0..cluster_ids.len())
