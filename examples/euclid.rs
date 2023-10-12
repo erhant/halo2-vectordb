@@ -26,7 +26,7 @@ pub struct CircuitInput {
 fn euclid_bug<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput,
-    make_public: &mut Vec<AssignedValue<F>>,
+    _make_public: &mut Vec<AssignedValue<F>>,
 ) {
     assert_eq!(input.a.len(), input.b.len());
 
@@ -41,8 +41,7 @@ fn euclid_bug<F: ScalarField>(
 
     // let mut dists: Vec<AssignedValue<F>> = vec![];
     for _ in 0..10 {
-        let dist: AssignedValue<F> = distance_chip.euclidean_distance(ctx, &a, &b);
-        // dists.push(dist);
+        let _dist: AssignedValue<F> = distance_chip.euclidean_distance(ctx, &a, &b);
     }
 }
 

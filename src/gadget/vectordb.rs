@@ -35,12 +35,12 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
 
     fn strategy(&self) -> VectorDBStrategy;
 
-    /// Given a query vector, returns the most similar vector
-    /// by doing an exhaustive search over all the given vectors
-    /// and with respect to provided distance function.
+    /// Given a `query` vector, returns the most similar vector
+    /// by doing an exhaustive search over all the given `vectors`
+    /// and with respect to provided `distance` function.
     ///
-    /// Also returns the indicator, that is an array of 0s and 1s where
-    /// only one index has 1, indicating the vector index within the vectors.
+    /// Returns the closest (most similar) vector along with a minimum indicator
+    /// that is 1 at the index of the vector, and 0 on all other places.
     fn nearest_vector(
         &self,
         ctx: &mut Context<F>,
@@ -55,23 +55,10 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
     where
         F: ScalarField;
 
-    /// Given a set of vectors and a mean vector, asserts that the mean of these vectors result in that
-    /// given vector; and returns a Merkle commitment to the given vectors.
+    /// Commits to an array of vectors using Merkle tree with Poseidon hash.
     ///
-    /// This is mostly used for cluster commitments at the end of K-means.
-    ///
-    /// TODO: It is possible for an adversary to construct another set of vectors that may result in the centroid!
-    // fn mean_merkle<const T: usize, const RATE: usize>(
-    //     &self,
-    //     ctx: &mut Context<F>,
-    //     poseidon: &mut PoseidonChip<F, T, RATE>,
-    //     vectors: &Vec<Vec<AssignedValue<F>>>,
-    //     expected_mean: &Vec<AssignedValue<F>>,
-    // ) -> AssignedValue<F>
-    // where
-    //     F: ScalarField;
-
-    /// Commits to an array of vectors.
+    /// If the given `vectors` does not have power-of-two many elements, it will
+    /// add zeros to the leaves to make up for the remaining leaves.
     fn merkle_commitment<const T: usize, const RATE: usize>(
         &self,
         ctx: &mut Context<F>,
@@ -101,6 +88,22 @@ pub trait VectorDBInstructions<F: ScalarField, const PRECISION_BITS: u32> {
     ) -> ([Vec<AssignedValue<F>>; K], Vec<[AssignedValue<F>; K]>)
     where
         F: ScalarField;
+
+    // Given a set of vectors and a mean vector, asserts that the mean of these vectors result in that
+    // given vector; and returns a Merkle commitment to the given vectors.
+    //
+    // This is mostly used for cluster commitments at the end of K-means.
+    //
+    // TODO: It is possible for an adversary to construct another set of vectors that may result in the centroid
+    // fn mean_merkle<const T: usize, const RATE: usize>(
+    //     &self,
+    //     ctx: &mut Context<F>,
+    //     poseidon: &mut PoseidonChip<F, T, RATE>,
+    //     vectors: &Vec<Vec<AssignedValue<F>>>,
+    //     expected_mean: &Vec<AssignedValue<F>>,
+    // ) -> AssignedValue<F>
+    // where
+    //     F: ScalarField;
 }
 
 impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PRECISION_BITS>
@@ -115,37 +118,6 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
     fn strategy(&self) -> VectorDBStrategy {
         self.strategy
     }
-
-    // fn mean_merkle<const T: usize, const RATE: usize>(
-    //     &self,
-    //     ctx: &mut Context<F>,
-    //     poseidon: &mut PoseidonChip<F, T, RATE>,
-    //     vectors: &Vec<Vec<AssignedValue<F>>>,
-    //     expected_mean: &Vec<AssignedValue<F>>,
-    // ) -> AssignedValue<F>
-    // where
-    //     F: ScalarField,
-    // {
-    //     let len = ctx.load_constant(self.fixed_point_gate.quantization(vectors.len() as f64));
-
-    //     let mean: Vec<AssignedValue<F>> = vectors
-    //         .clone()
-    //         .into_iter()
-    //         // sum everything
-    //         .reduce(|sum, vector| {
-    //             vector
-    //                 .iter()
-    //                 .zip(sum)
-    //                 .map(|(s, v)| self.fixed_point_gate.qadd(ctx, *s, v))
-    //                 .collect()
-    //         })
-    //         // divide by length
-    //         .map(|sum| &sum.into_iter().map(|s| self.fixed_point_gate.qdiv(ctx, s, len)).collect())
-    //         .unwrap();
-
-    //     // return commitment to vectors
-    //     self.merkle_commitment(ctx, poseidon, vectors)
-    // }
 
     fn nearest_vector(
         &self,
@@ -388,4 +360,35 @@ impl<'a, F: ScalarField, const PRECISION_BITS: u32> VectorDBInstructions<F, PREC
 
         (centroids, cluster_indicators)
     }
+
+    // fn mean_merkle<const T: usize, const RATE: usize>(
+    //     &self,
+    //     ctx: &mut Context<F>,
+    //     poseidon: &mut PoseidonChip<F, T, RATE>,
+    //     vectors: &Vec<Vec<AssignedValue<F>>>,
+    //     expected_mean: &Vec<AssignedValue<F>>,
+    // ) -> AssignedValue<F>
+    // where
+    //     F: ScalarField,
+    // {
+    //     let len = ctx.load_constant(self.fixed_point_gate.quantization(vectors.len() as f64));
+
+    //     let mean: Vec<AssignedValue<F>> = vectors
+    //         .clone()
+    //         .into_iter()
+    //         // sum everything
+    //         .reduce(|sum, vector| {
+    //             vector
+    //                 .iter()
+    //                 .zip(sum)
+    //                 .map(|(s, v)| self.fixed_point_gate.qadd(ctx, *s, v))
+    //                 .collect()
+    //         })
+    //         // divide by length
+    //         .map(|sum| &sum.into_iter().map(|s| self.fixed_point_gate.qdiv(ctx, s, len)).collect())
+    //         .unwrap();
+
+    //     // return commitment to vectors
+    //     self.merkle_commitment(ctx, poseidon, vectors)
+    // }
 }

@@ -2,6 +2,5 @@
 #![feature(array_zip)]
 #![allow(incomplete_features)]
 
-pub mod circuits;
 pub mod gadget;
 pub mod scaffold;

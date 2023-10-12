@@ -98,7 +98,6 @@ pub fn chip_kmeans<const K: usize, const I: usize>(
     let fixed_point_chip = FixedPointChip::<F, PRECISION_BITS>::default(LOOKUP_BITS);
     let distance_chip = DistanceChip::default(&fixed_point_chip);
     let vectordb_chip = VectorDBChip::default(&fixed_point_chip);
-    let mut poseidon_chip = PoseidonChip::<F, T, RATE>::new(ctx, R_F, R_P).unwrap();
 
     let qvectors: Vec<Vec<AssignedValue<F>>> = vectors
         .iter()
